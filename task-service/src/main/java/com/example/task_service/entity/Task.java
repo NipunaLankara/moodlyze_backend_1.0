@@ -12,18 +12,17 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@AllArgsConstructor
-@NoArgsConstructor
-@Data
-
 @Table(name = "tasks")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Task {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId; // from JWT
+    private int userId; // from JWT
 
     private String title;
 
@@ -37,11 +36,23 @@ public class Task {
 
     private LocalTime deadlineTime; // optional
 
-    private LocalDate taskDate;
+    private LocalDate taskDate; // the day this task is for
 
     @Enumerated(EnumType.STRING)
-    private TaskStatus status;
+    private TaskStatus status = TaskStatus.PENDING;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void prePersist() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }
+
