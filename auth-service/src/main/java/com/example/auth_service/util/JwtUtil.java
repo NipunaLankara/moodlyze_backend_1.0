@@ -16,14 +16,17 @@ public class JwtUtil {
 
     private final Algorithm algorithm = Algorithm.HMAC256(SECRET_KEY);
 
-    public String generateToken(String email) {
+    public String generateToken(String email, int userId, String role) {
 
         return JWT.create()
                 .withSubject(email)
-                .withIssuedAt(Date.from(Instant.now()))
-                .withExpiresAt(Date.from(Instant.now().plusSeconds(TOKEN_VALIDITY)))
+                .withClaim("userId", userId)
+                .withClaim("role", role)
+                .withIssuedAt(new Date())
+                .withExpiresAt(new Date(System.currentTimeMillis() + TOKEN_VALIDITY * 1000))
                 .sign(algorithm);
     }
+
 
     public String extractEmail(String token) {
 

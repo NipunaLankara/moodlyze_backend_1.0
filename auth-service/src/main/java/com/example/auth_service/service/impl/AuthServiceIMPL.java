@@ -197,8 +197,11 @@ public class AuthServiceIMPL implements AuthService {
                 new UsernamePasswordAuthenticationToken(dto.getUserEmail(), dto.getPassword())
         );
         String userEmail = dto.getUserEmail();
-        String generatedToken = jwtUtil.generateToken(userEmail);
+        Integer userId= userApiClient.getUserId(userEmail);
         String role = userApiClient.getRole(userEmail);         // Fetch user role from User-Service
+
+        String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
+
 
         AuthUsers authUsers = authUserRepo.findByUsername(userEmail);
 

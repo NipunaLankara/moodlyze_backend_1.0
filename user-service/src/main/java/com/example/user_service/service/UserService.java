@@ -8,4 +8,6 @@ public interface UserService {
     boolean saveNewUser(@Valid UserSaveDTO userSaveDTO);
 
     String getRole(String email);
+
+    int getId(String email);
 }
