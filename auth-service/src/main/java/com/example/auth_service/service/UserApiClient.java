@@ -15,4 +15,7 @@ public interface UserApiClient {
 
     @GetMapping("/api/v1/user/get-role")
     String getRole(@RequestParam("email") String email); // Added @RequestParam here too
+
+    @GetMapping("/api/v1/user/get-id")
+    Integer getUserId(@RequestParam("email") String email); // Added @RequestParam here too
 }

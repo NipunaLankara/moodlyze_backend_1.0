@@ -46,4 +46,18 @@ public class UserServiceIMPL implements UserService {
             throw new RuntimeException("Internal server error",e);
         }
     }
+
+    @Override
+    public int getId(String email) {
+        try {
+            User user = userRepo.findByEmail(email);
+            if (user == null) {
+                throw new RuntimeException("User not found with email: " + email);
+            }
+            return user.getUserId();
+
+        } catch (Exception e){
+            throw new RuntimeException("Internal server error",e);
+        }
+    }
 }

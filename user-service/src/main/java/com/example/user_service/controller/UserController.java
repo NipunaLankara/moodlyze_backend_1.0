@@ -45,4 +45,9 @@ public class UserController {
         System.out.println("Email issssssssss=====" + email);
         return userService.getRole(email);
     }
+
+    @GetMapping("get-id")
+    public int getId(@RequestParam("email") String email) {
+        return userService.getId(email);
+    }
 }
