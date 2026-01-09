@@ -3,15 +3,15 @@ package com.example.task_service.service.impl;
 import com.example.task_service.dto.request.TaskCreateRequestDTO;
 import com.example.task_service.dto.response.TaskResponseDTO;
 import com.example.task_service.entity.Task;
+import com.example.task_service.entity.enums.TaskStatus;
+import com.example.task_service.exception.NotFoundException;
 import com.example.task_service.exception.TaskServiceException;
 import com.example.task_service.mapper.TaskMapper;
 import com.example.task_service.repo.TaskRepo;
 import com.example.task_service.service.TaskSerivce;
-import jakarta.ws.rs.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,17 +52,24 @@ public class TaskServiceIMPL  implements TaskSerivce {
 
     @Override
     public TaskResponseDTO getTaskById(Long taskId, int userId) {
+        Task task = taskRepo.findByIdAndUserId(taskId, userId)
+                .orElseThrow(() -> new NotFoundException("Task with id " + taskId + " not found for this user"));
 
-        try {
-           Task task = taskRepo.findByIdAndUserId(taskId,userId);
+        return taskMapper.entityToDto(task);
+    }
 
-           if (task == null) {
-               throw  new NotFoundException("Task not found");
-           }
-           return taskMapper.entityToDto(task);
-        } catch (Exception e) {
-            throw new TaskServiceException("Failed to get task: " + e.getMessage(), e);
+
+    @Override
+    public List<TaskResponseDTO> getAllTasksByStatus(TaskStatus status, int userId) {
+        List<Task> taskList = taskRepo.findByStatusAndUserId(status, userId);
+
+        if (taskList.isEmpty()) {
+            throw new NotFoundException("No tasks found for status: " + status);
         }
+
+        return taskList.stream()
+                .map(taskMapper::entityToShortResponse)
+                .collect(Collectors.toList());
     }
 
 }

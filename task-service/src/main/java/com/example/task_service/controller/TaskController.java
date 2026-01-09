@@ -2,6 +2,7 @@ package com.example.task_service.controller;
 
 import com.example.task_service.dto.request.TaskCreateRequestDTO;
 import com.example.task_service.dto.response.TaskResponseDTO;
+import com.example.task_service.entity.enums.TaskStatus;
 import com.example.task_service.service.TaskSerivce;
 import com.example.task_service.utill.StandardResponse;
 import jakarta.validation.Valid;
@@ -54,6 +55,20 @@ public class TaskController {
                 new StandardResponse(200,"Success,Get Task",taskResponseDTO)
                 ,HttpStatus.OK
         );
+    }
+
+    @GetMapping("/get-all-by-status/{status}")
+    public ResponseEntity<StandardResponse> getAllTasksByStatus(
+            @PathVariable("status") TaskStatus status,
+            @RequestHeader("X-User-Id") int userId
+    ){
+        List<TaskResponseDTO> taskResponseDTOList = taskSerivce.getAllTasksByStatus(status,userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200,"Task List Status = "+status,taskResponseDTOList)
+                ,HttpStatus.OK
+        );
+
     }
 
 
