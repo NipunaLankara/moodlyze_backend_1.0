@@ -1,6 +1,7 @@
 package com.example.task_service.controller;
 
 import com.example.task_service.dto.request.TaskCreateRequestDTO;
+import com.example.task_service.dto.response.TaskResponseDTO;
 import com.example.task_service.service.TaskSerivce;
 import com.example.task_service.utill.StandardResponse;
 import jakarta.validation.Valid;
@@ -8,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tasks")
@@ -28,6 +31,19 @@ public class TaskController {
                 ,HttpStatus.OK
         );
     }
+
+    @GetMapping("/get-all")
+    public ResponseEntity<StandardResponse> getAllTasks(@RequestHeader("X-User-Id") int userId){
+
+        List<TaskResponseDTO> taskResponseDTOList = taskSerivce.getAllTasks(userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200,"Task List",taskResponseDTOList)
+                ,HttpStatus.OK
+        );
+
+    }
+
 
 
 
