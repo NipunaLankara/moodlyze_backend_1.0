@@ -9,4 +9,6 @@ public interface TaskSerivce {
     String createNewTask(TaskCreateRequestDTO taskCreateRequestDTO, int userId);
 
     List<TaskResponseDTO> getAllTasks(int userId);
+
+    TaskResponseDTO getTaskById(Long taskId, int userId);
 }

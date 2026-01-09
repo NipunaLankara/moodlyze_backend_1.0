@@ -41,7 +41,19 @@ public class TaskController {
                 new StandardResponse(200,"Task List",taskResponseDTOList)
                 ,HttpStatus.OK
         );
+    }
 
+    @GetMapping("/get-by-id/{id}")
+    public ResponseEntity<StandardResponse> getTaskById(
+            @PathVariable("id") Long taskId,
+            @RequestHeader("X-User-Id") int userId
+    ){
+        TaskResponseDTO taskResponseDTO = taskSerivce.getTaskById(taskId,userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200,"Success,Get Task",taskResponseDTO)
+                ,HttpStatus.OK
+        );
     }
 
 

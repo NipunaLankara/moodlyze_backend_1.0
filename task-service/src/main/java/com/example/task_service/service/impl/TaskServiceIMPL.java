@@ -7,6 +7,7 @@ import com.example.task_service.exception.TaskServiceException;
 import com.example.task_service.mapper.TaskMapper;
 import com.example.task_service.repo.TaskRepo;
 import com.example.task_service.service.TaskSerivce;
+import jakarta.ws.rs.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -46,6 +47,21 @@ public class TaskServiceIMPL  implements TaskSerivce {
 
         } catch (Exception e) {
             throw new TaskServiceException("Failed to get all tasks: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public TaskResponseDTO getTaskById(Long taskId, int userId) {
+
+        try {
+           Task task = taskRepo.findByIdAndUserId(taskId,userId);
+
+           if (task == null) {
+               throw  new NotFoundException("Task not found");
+           }
+           return taskMapper.entityToDto(task);
+        } catch (Exception e) {
+            throw new TaskServiceException("Failed to get task: " + e.getMessage(), e);
         }
     }
 
