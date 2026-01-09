@@ -1,6 +1,7 @@
 package com.example.task_service.service;
 
 import com.example.task_service.dto.request.TaskCreateRequestDTO;
+import com.example.task_service.dto.request.TaskUpdateRequestDTO;
 import com.example.task_service.dto.response.TaskResponseDTO;
 import com.example.task_service.entity.enums.TaskStatus;
 
@@ -14,4 +15,8 @@ public interface TaskSerivce {
     TaskResponseDTO getTaskById(Long taskId, int userId);
 
     List<TaskResponseDTO> getAllTasksByStatus(TaskStatus status, int userId);
+
+    TaskResponseDTO updateTask(Long taskId, int userId, TaskUpdateRequestDTO taskUpdateRequestDTO);
+
+    String delete(Long taskId, int userId);
 }

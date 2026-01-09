@@ -1,6 +1,7 @@
 package com.example.task_service.controller;
 
 import com.example.task_service.dto.request.TaskCreateRequestDTO;
+import com.example.task_service.dto.request.TaskUpdateRequestDTO;
 import com.example.task_service.dto.response.TaskResponseDTO;
 import com.example.task_service.entity.enums.TaskStatus;
 import com.example.task_service.service.TaskSerivce;
@@ -70,6 +71,36 @@ public class TaskController {
         );
 
     }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<StandardResponse> updateTask(
+            @PathVariable("id") Long taskId,
+            @RequestBody TaskUpdateRequestDTO taskUpdateRequestDTO,
+            @RequestHeader("X-User-Id") int userId
+    ) {
+        TaskResponseDTO updatedTask =
+                taskSerivce.updateTask(taskId, userId, taskUpdateRequestDTO);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Task updated successfully", updatedTask),
+                HttpStatus.OK
+        );
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<StandardResponse> deleteTask(
+            @PathVariable("id")Long taskId,
+            @RequestHeader("X-User-Id") int userId
+    ){
+
+        String msg = taskSerivce.delete(taskId,userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Success", msg),
+                HttpStatus.OK
+        );
+    }
+
 
 
 
