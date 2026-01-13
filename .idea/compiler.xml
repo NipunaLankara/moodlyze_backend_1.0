@@ -10,6 +10,7 @@
         <module name="config-server" />
         <module name="auth-service" />
         <module name="email-service" />
+        <module name="emotion-service" />
         <module name="api-gateway" />
         <module name="task-service" />
         <module name="user-service" />
@@ -23,6 +24,7 @@
       <module name="auth-service" options="-parameters" />
       <module name="config-server" options="-parameters" />
       <module name="email-service" options="-parameters" />
+      <module name="emotion-service" options="-parameters" />
       <module name="service-registry" options="-parameters" />
       <module name="task-service" options="-parameters" />
       <module name="user-service" options="-parameters" />
