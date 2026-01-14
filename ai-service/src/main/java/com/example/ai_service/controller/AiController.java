@@ -14,7 +14,7 @@ public class AiController {
     private AiService aiService;
 
     @PostMapping("/generate")
-    public String generate(@RequestBody AiRequestDTO requestDTO) {
-        return aiService.generateResponse(requestDTO.getPrompt());
+    public String generate(@RequestBody String prompt) {
+        return aiService.generateResponse(prompt);
     }
 }
