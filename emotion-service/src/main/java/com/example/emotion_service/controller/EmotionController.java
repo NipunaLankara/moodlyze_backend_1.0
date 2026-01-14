@@ -57,6 +57,19 @@ public class EmotionController {
 
     }
 
+    @GetMapping("/latest")
+    public ResponseEntity<StandardResponse> getLatestEmotion(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+        String emotion = emotionService.getLatestEmotion(userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Latest Emotion ", emotion),
+                HttpStatus.OK
+        );
+
+    }
+
     @GetMapping("/get-message-with-id")
     public ResponseEntity<StandardResponse> getMessageWithId(@RequestHeader("X-User-Id") int userId) {
         String msg = "Emotion Service with id: " + userId;

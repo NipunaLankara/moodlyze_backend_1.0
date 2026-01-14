@@ -9,4 +9,6 @@ public interface EmotionService {
     Object detectFromSpeech(MultipartFile file, int userId);
 
     String detectFromText(TextEmotionRequestDTO textEmotionRequestDTO, int userId);
+
+    String getLatestEmotion(int userId);
 }

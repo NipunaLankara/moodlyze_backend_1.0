@@ -91,4 +91,12 @@ public class EmotionServiceIMPL implements EmotionService {
             throw new EmotionDetectionException("Failed to process text emotion: " + e.getMessage());
         }
     }
+
+    @Override
+    public String getLatestEmotion(int userId) {
+
+        return emotionRepo.findTopByUserIdOrderByDetectedAtDesc(userId)
+                .map(EmotionRecord::getEmotion) // Extracts only the "HAPPY"/"SAD" string
+                .orElseThrow(() -> new EmotionDetectionException("No emotion records found for user ID: " + userId));
+    }
 }
