@@ -22,7 +22,7 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int userId; // from JWT
+    private int userId;
 
     private String title;
 
@@ -43,6 +43,7 @@ public class Task {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     public void prePersist() {
