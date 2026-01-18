@@ -1,6 +1,8 @@
 package com.example.analyze_service.service.impl;
 
 import com.example.analyze_service.dto.AnalysisResponseDTO;
+import com.example.analyze_service.entity.TaskAnalysis;
+import com.example.analyze_service.repo.AnalysisRepo;
 import com.example.analyze_service.service.AiServiceClient;
 import com.example.analyze_service.service.AnalyzeService;
 import com.example.analyze_service.service.EmotionClient;
@@ -8,6 +10,7 @@ import com.example.analyze_service.service.TaskClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -19,6 +22,8 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
     private EmotionClient emotionClient;
     @Autowired
     private AiServiceClient aiClient;
+    @Autowired
+    private AnalysisRepo analysisRepo;
 
     public AnalysisResponseDTO processUserStatus(int userId) {
 
@@ -30,19 +35,37 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
             return new AnalysisResponseDTO("REST_REQUIRED", currentMood, suggestions, null);
         } else {
 
-            return new AnalysisResponseDTO("READY_TO_WORK", currentMood, "this code pending....", null);
+//            return new AnalysisResponseDTO("READY_TO_WORK", currentMood, "this code pending....", null);
 
-//            // Good Mood get ONLY PENDING tasks
-//            Object pendingTasks = taskClient.getTasksByStatus("PENDING", userId).getBody().getData();
-//
-//            // AI summarize the taks
-//            String prompt = "The user is feeling " + currentMood + ". " +
-//                    "Here are their PENDING tasks: " + pendingTasks.toString() +
-//                    ". Give a 1-sentence encouragement and tell them which task looks most important.";
-//
-//            String aiAnalysis = aiClient.generate(prompt);
-//
-//            return new AnalysisResponseDTO("READY_TO_WORK", currentMood, aiAnalysis, pendingTasks);
+            Object pendingTasks = taskClient.getTasksByStatus("PENDING", userId).getBody().getData();
+
+            // 2. Define Work Constraints
+            String workStartTime = "08:00 AM";
+            String workEndTime = "05:00 PM";
+
+            // 3. Complex AI Prompt for Scheduling & Breakdown
+            String prompt = "Act as a Smart Productivity Assistant. User Mood: " + currentMood + ".\n" +
+                    "Work Hours: " + workStartTime + " to " + workEndTime + ".\n" +
+                    "Tasks: " + pendingTasks.toString() + ".\n\n" +
+                    "Instructions:\n" +
+                    "1. Order tasks by Priority (HIGH first) and Deadline.\n" +
+                    "2. If a task takes > 4 hours, break it into smaller sub-tasks (e.g., Part 1, Part 2).\n" +
+                    "3. Assign specific time slots for each task starting from " + workStartTime + ".\n" +
+                    "4. Insert 15-minute breaks after every 90 minutes of work.\n" +
+                    "5. Output a clear, structured daily schedule.";
+
+            String aiAnalysis = aiClient.generate(prompt);
+
+            // 4. Save the Result
+            TaskAnalysis analysis = new TaskAnalysis();
+            analysis.setUserId(userId);
+            analysis.setMoodAtTime(currentMood);
+            analysis.setSmartPlan(aiAnalysis);
+            analysis.setWorkingWindow(workStartTime + "-" + workEndTime);
+            analysis.setCreatedAt(LocalDateTime.now());
+            analysisRepo.save(analysis);
+
+            return new AnalysisResponseDTO("READY_TO_WORK", currentMood, aiAnalysis, pendingTasks);
         }
     }
 
