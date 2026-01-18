@@ -1,6 +1,7 @@
 package com.example.task_service.service.impl;
 
 import com.example.task_service.dto.request.TaskCreateRequestDTO;
+import com.example.task_service.dto.request.TaskUpdateRequestDTO;
 import com.example.task_service.dto.response.TaskResponseDTO;
 import com.example.task_service.entity.Task;
 import com.example.task_service.entity.enums.TaskStatus;
@@ -71,5 +72,49 @@ public class TaskServiceIMPL  implements TaskSerivce {
                 .map(taskMapper::entityToDto)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public TaskResponseDTO updateTask(Long taskId, int userId, TaskUpdateRequestDTO dto) {
+
+        Task task = taskRepo.findByIdAndUserId(taskId, userId)
+                .orElseThrow(() ->
+                        new NotFoundException("Task with id " + taskId + " not found for this user")
+                );
+
+        if (dto.getTitle() != null) {
+            task.setTitle(dto.getTitle());
+        }
+        if (dto.getDescription() != null) {
+            task.setDescription(dto.getDescription());
+        }
+        if (dto.getPriority() != null) {
+            task.setPriority(dto.getPriority());
+        }
+        if (dto.getEstimatedTimeMinutes() != null) {
+            task.setEstimatedTimeMinutes(dto.getEstimatedTimeMinutes());
+        }
+        if (dto.getDeadlineTime() != null) {
+            task.setDeadlineTime(dto.getDeadlineTime());
+        }
+        if (dto.getStatus() != null) {
+            task.setStatus(dto.getStatus());
+        }
+
+        Task updatedTask = taskRepo.save(task);
+
+        return taskMapper.entityToDto(updatedTask);
+    }
+
+    @Override
+    public String delete(Long taskId, int userId) {
+
+        if (taskRepo.findByIdAndUserId(taskId, userId).isPresent()) {
+            taskRepo.deleteById(taskId);
+            return "Task deleted successfully";
+        } else {
+            throw new NotFoundException("Task with id " + taskId + " not found for this user");
+        }
+    }
+
 
 }
