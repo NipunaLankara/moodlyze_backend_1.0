@@ -24,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.authService = authService;
     }
 
+
     private static final List<String> PUBLIC_ENDPOINTS = List.of(
             "/api/v1/auth/sign-in",
             "/api/v1/auth/sign-up",
@@ -34,6 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+
 
         String path = request.getRequestURI();
 

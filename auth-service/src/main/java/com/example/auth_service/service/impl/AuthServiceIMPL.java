@@ -71,24 +71,23 @@ public class AuthServiceIMPL implements AuthService {
 
         String email = userSaveDTO.getEmail();
 
-        // 1. Check email already exists in DB (verified users)
+        // Check email in DB
         if (authUserRepo.existsByUsername(email)) {
             throw new AlreadyExistsException("Email already exists");
         }
 
-        // 2. Save user data temporarily in Redis
+        //  Save user  Redis
         String tempKey = "tempUser:" + email;
         String json = objectMapper.writeValueAsString(userSaveDTO); // Convert object to JSON
 
         stringRedisTemplate.opsForValue().set(tempKey, json, Duration.ofMinutes(10));
 
-        // 3. Generate + save OTP in Redis
         String otp = otpGenerator.generateOtp();
         String otpKey = "otp:" + email;
 
         stringRedisTemplate.opsForValue().set(otpKey, otp, Duration.ofMinutes(5));
 
-        // 4. Send OTP email
+        // Send OTP email
         EmailRequestDTO request = new EmailRequestDTO();
         request.setTo(email);
         request.setSubject("Book Shop Registration OTP");
@@ -108,10 +107,10 @@ public class AuthServiceIMPL implements AuthService {
 
         String email = otpVerifyDTO.getEmail();
 
-        // 1. Verify OTP
+        // Verify OTP
         otpVerify.verifyAndDelete(email, otpVerifyDTO.getOtp());
 
-        // 2. Retrieve temporary user data from Redis
+        // Retrieve temporary user data from Redis
         String tempKey = "tempUser:" + email;
         String tempJson = stringRedisTemplate.opsForValue().get(tempKey);
 
@@ -155,7 +154,7 @@ public class AuthServiceIMPL implements AuthService {
             throw new RuntimeException("User-service unavailable. Try again later.", e);
         }
 
-        // 5. Clean Redis temporary data
+        // Clean Redis temporary data
         stringRedisTemplate.delete(tempKey);
 
         return "Account created & verified successfully!";
@@ -192,13 +191,13 @@ public class AuthServiceIMPL implements AuthService {
 
     @Override
     public Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception {
-        // 1. Authenticate FIRST (This throws BadCredentialsException if login fails)
+        // Authenticate FIRST (This throws BadCredentialsException if login fails)
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(dto.getUserEmail(), dto.getPassword())
         );
         String userEmail = dto.getUserEmail();
         Integer userId= userApiClient.getUserId(userEmail);
-        String role = userApiClient.getRole(userEmail);         // Fetch user role from User-Service
+        String role = userApiClient.getRole(userEmail);   //  Use UserAPIClient.........
 
         String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
 
