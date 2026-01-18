@@ -68,7 +68,7 @@ public class TaskServiceIMPL  implements TaskSerivce {
         }
 
         return taskList.stream()
-                .map(taskMapper::entityToShortResponse)
+                .map(taskMapper::entityToDto)
                 .collect(Collectors.toList());
     }
 
