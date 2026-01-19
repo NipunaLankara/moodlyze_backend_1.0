@@ -35,7 +35,7 @@ public class UserServiceIMPL implements UserService {
             return true;
 
         } catch (Exception e) {
-            throw new RuntimeException("Internal server error",e);
+            throw new RuntimeException("Internal server error", e);
         }
     }
 
@@ -49,8 +49,8 @@ public class UserServiceIMPL implements UserService {
             }
             return user.getUserRole();
 
-        } catch (Exception e){
-            throw new RuntimeException("Internal server error",e);
+        } catch (Exception e) {
+            throw new RuntimeException("Internal server error", e);
         }
     }
 
@@ -63,8 +63,8 @@ public class UserServiceIMPL implements UserService {
             }
             return user.getUserId();
 
-        } catch (Exception e){
-            throw new RuntimeException("Internal server error",e);
+        } catch (Exception e) {
+            throw new RuntimeException("Internal server error", e);
         }
     }
 
@@ -90,11 +90,11 @@ public class UserServiceIMPL implements UserService {
                     user.getEmail(),
                     dto.getEmail()
             );
-           StandardResponse response = authApiClient.requestEmailChange(emailChangeRequestDTO);
+            StandardResponse response = authApiClient.requestEmailChange(emailChangeRequestDTO);
 
 //            System.out.println("Email change response  in authapiclient " + response);
 
-           return response.getData();
+            return response.getData();
         }
 
         return "Profile updated successfully";
@@ -113,4 +113,26 @@ public class UserServiceIMPL implements UserService {
         }
     }
 
+    @Override
+    public Object deleteUser(int userId) {
+
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        String email = user.getEmail();
+
+        // first delete in auth-service
+        StandardResponse response = authApiClient.deleteAuthUser(email);
+
+        if (response.getMassage().equals("Success")) {
+            userRepo.delete(user);
+
+            return "User deleted successfully";
+        } else {
+            throw new RuntimeException("Internal server error");
+        }
+
+    }
 }
+
+

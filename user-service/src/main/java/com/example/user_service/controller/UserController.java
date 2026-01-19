@@ -78,6 +78,18 @@ public class UserController {
 
     }
 
+    @DeleteMapping("delete")
+    public ResponseEntity<StandardResponse> deleteUser(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+       Object msg = userService.deleteUser(userId);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Success", msg)
+        );
+    }
+
+
 
 
 }
