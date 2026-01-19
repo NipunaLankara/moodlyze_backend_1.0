@@ -11,4 +11,6 @@ public interface AuthUserRepo  extends JpaRepository<AuthUsers,Integer> {
     boolean existsByUsername(String email);
 
     AuthUsers findByUsername(String email);
+
+    void deleteByUsername(String username);
 }

@@ -15,4 +15,6 @@ public interface UserService {
     Object updateProfile(int userId, UserProfileUpdateDTO dto);
 
     String updateEmail(String oldEmail, String newEmail);
+
+    Object deleteUser(int userId);
 }

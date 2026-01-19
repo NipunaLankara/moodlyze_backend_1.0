@@ -15,6 +15,7 @@ import com.example.auth_service.util.OtpVerify;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -297,6 +298,19 @@ public class AuthServiceIMPL implements AuthService {
         stringRedisTemplate.delete(redisKey);
 
         return "Email updated successfully";
+    }
+
+    @Override
+    @Transactional
+    public String deleteAuthUser(String email) {
+
+        AuthUsers user = authUserRepo.findByUsername(email);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found");
+        }
+
+        authUserRepo.delete(user);
+        return "User deleted successfully";
     }
 
 

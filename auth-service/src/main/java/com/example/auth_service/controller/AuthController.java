@@ -85,5 +85,17 @@ public class AuthController {
         );
     }
 
+    @DeleteMapping("/internal/delete")
+    public ResponseEntity<StandardResponse> deleteAuthUser(@RequestParam("email") String email) {
+
+        String msg = authService.deleteAuthUser(email);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Success", msg),
+                HttpStatus.OK
+        );
+
+    }
+
 
 }
