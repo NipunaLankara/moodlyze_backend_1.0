@@ -1,5 +1,6 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.request.EmailChangeRequestDTO;
 import com.example.auth_service.dto.request.LoginRequestDTO;
 import com.example.auth_service.dto.request.OtpVerifyDTO;
 import com.example.auth_service.dto.request.UserSaveDTO;
@@ -31,8 +32,8 @@ public class AuthController {
 
         String message = authService.saveNewUser(userSaveDTO);
 
-        return  new ResponseEntity<>(
-                new StandardResponse(200,"Success",message), HttpStatus.OK
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Success", message), HttpStatus.OK
         );
     }
 
@@ -57,5 +58,32 @@ public class AuthController {
                 HttpStatus.OK
         );
     }
+
+    @PostMapping("/email-change/request")
+    public ResponseEntity<StandardResponse> requestEmailChange(
+            @RequestBody EmailChangeRequestDTO dto
+    ) {
+
+        String msg = authService.requestEmailChange(dto.getOldEmail(), dto.getNewEmail());
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Success", msg),
+                HttpStatus.OK
+        );
+    }
+
+    @PostMapping("/email-change/verify")
+    public ResponseEntity<?> verifyEmailChange(
+            @RequestBody OtpVerifyDTO dto
+    ) {
+
+        String msg = authService.verifyEmailChange(dto);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Success", msg),
+                HttpStatus.OK
+        );
+    }
+
 
 }
