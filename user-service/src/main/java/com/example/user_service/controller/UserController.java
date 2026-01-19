@@ -2,6 +2,7 @@ package com.example.user_service.controller;
 
 import com.example.user_service.dto.request.UserProfileUpdateDTO;
 import com.example.user_service.dto.request.UserSaveDTO;
+import com.example.user_service.dto.response.UserResponseDTO;
 import com.example.user_service.service.UserService;
 import com.example.user_service.utill.StandardResponse;
 import jakarta.validation.Valid;
@@ -49,6 +50,19 @@ public class UserController {
     @GetMapping("get-id")
     public int getId(@RequestParam("email") String email) {
         return userService.getId(email);
+    }
+
+    @GetMapping("get-user-by-id")
+    public ResponseEntity<StandardResponse> getUserById(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+       UserResponseDTO userResponseDTO = userService.getUserById(userId);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Success", userResponseDTO)
+        );
+
+
     }
 
     @PutMapping("/update-profile")

@@ -3,6 +3,7 @@ package com.example.user_service.service.impl;
 import com.example.user_service.dto.request.EmailChangeRequestDTO;
 import com.example.user_service.dto.request.UserProfileUpdateDTO;
 import com.example.user_service.dto.request.UserSaveDTO;
+import com.example.user_service.dto.response.UserResponseDTO;
 import com.example.user_service.entity.User;
 import com.example.user_service.exception.AlreadyExistsException;
 import com.example.user_service.exception.ResourceNotFoundException;
@@ -131,6 +132,17 @@ public class UserServiceIMPL implements UserService {
         } else {
             throw new RuntimeException("Internal server error");
         }
+
+    }
+
+    @Override
+    public UserResponseDTO getUserById(int userId) {
+
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        UserResponseDTO userResponseDTO = userMapper.entityToDto(user);
+        return userResponseDTO;
 
     }
 }
