@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -196,7 +195,7 @@ public class AuthServiceIMPL implements AuthService {
                 new UsernamePasswordAuthenticationToken(dto.getUserEmail(), dto.getPassword())
         );
         String userEmail = dto.getUserEmail();
-        Integer userId= userApiClient.getUserId(userEmail);
+        Integer userId = userApiClient.getUserId(userEmail);
         String role = userApiClient.getRole(userEmail);   //  Use UserAPIClient.........
 
         String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
@@ -222,6 +221,83 @@ public class AuthServiceIMPL implements AuthService {
             emailApiClient.sendEmail(request);
 
         }
-        return new LoginResponseDTO(userEmail,role, generatedToken);
+        return new LoginResponseDTO(userEmail, role, generatedToken);
     }
+
+    @Override
+    public String requestEmailChange(String oldEmail, String newEmail) {
+
+        if (oldEmail.equals(newEmail)) {
+            throw new RuntimeException("New email cannot be same as old email");
+        }
+
+        AuthUsers user = authUserRepo.findByUsername(oldEmail);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found");
+        }
+
+        if (authUserRepo.existsByUsername(newEmail)) {
+            throw new AlreadyExistsException("Email already exists");
+        }
+
+        // -------- Generate OTP (reuse existing)
+        String otp = otpGenerator.generateOtp();
+
+        // -------- Save OTP in Redis
+        stringRedisTemplate.opsForValue().set(
+                "otp:" + newEmail,
+                otp,
+                Duration.ofMinutes(5)
+        );
+
+        // -------- Save pending email change
+        stringRedisTemplate.opsForValue().set(
+                "email-change:" + oldEmail,   // here when user verify otp insert older email,can not change it because it used - Update auth-service DB
+                newEmail,
+                Duration.ofMinutes(10)
+        );
+
+        // -------- Send OTP email (reuse existing email-service)
+        EmailRequestDTO mail = new EmailRequestDTO();
+        mail.setTo(newEmail);
+        mail.setSubject("Verify New Email");
+        mail.setBody("Your OTP is: " + otp);
+
+        emailApiClient.sendEmail(mail);
+
+        return "OTP sent to new email address";
+    }
+
+    @Override
+    public String verifyEmailChange(OtpVerifyDTO dto) {
+
+        String redisKey = "email-change:" + dto.getEmail();
+        String newEmail = stringRedisTemplate.opsForValue().get(redisKey);
+
+        if (newEmail == null) {
+            throw new RuntimeException("Email change request expired");
+        }
+
+        // -------- Verify OTP
+        otpVerify.verifyAndDelete(newEmail, dto.getOtp());
+
+        // -------- Update auth-service DB
+        AuthUsers user = authUserRepo.findByUsername(dto.getEmail());   // here use older email.........
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found");
+        }
+
+        user.setUsername(newEmail);
+        authUserRepo.save(user);
+
+        // -------- Sync user-service
+        userApiClient.updateEmail(dto.getEmail(), newEmail);
+
+        // -------- Clean Redis
+        stringRedisTemplate.delete(redisKey);
+
+        return "Email updated successfully";
+    }
+
+
 }

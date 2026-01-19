@@ -9,8 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import java.rmi.AlreadyBoundException;
-
 public interface AuthService extends UserDetailsService {
     String saveNewUser(@Valid UserSaveDTO userSaveDTO) throws JsonProcessingException;
 
@@ -19,4 +17,8 @@ public interface AuthService extends UserDetailsService {
     UserDetails loadUserByUsername(String username) throws UsernameNotFoundException;
 
     Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception;
+
+    String requestEmailChange(String oldEmail, String newEmail);
+
+    String verifyEmailChange(OtpVerifyDTO dto);
 }

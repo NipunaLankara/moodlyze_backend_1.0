@@ -1,5 +1,6 @@
 package com.example.user_service.controller;
 
+import com.example.user_service.dto.request.UserProfileUpdateDTO;
 import com.example.user_service.dto.request.UserSaveDTO;
 import com.example.user_service.service.UserService;
 import com.example.user_service.utill.StandardResponse;
@@ -49,4 +50,34 @@ public class UserController {
     public int getId(@RequestParam("email") String email) {
         return userService.getId(email);
     }
+
+    @PutMapping("/update-profile")
+    public ResponseEntity<StandardResponse> updateProfile(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestBody UserProfileUpdateDTO dto
+    ) {
+
+        Object msg = userService.updateProfile(userId, dto);
+        System.out.println("Response msg = "+ msg);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Success", msg)
+        );
+    }
+
+    @PutMapping("/update-email")
+    public ResponseEntity<StandardResponse> updateEmail(
+            @RequestParam("oldEmail") String oldEmail,
+            @RequestParam("newEmail") String newEmail
+    ){
+        String msg = userService.updateEmail(oldEmail,newEmail);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Success", msg)
+        );
+
+    }
+
+
+
 }
