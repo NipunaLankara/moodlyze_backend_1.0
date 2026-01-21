@@ -41,7 +41,7 @@ public class AuthController {
     public ResponseEntity<StandardResponse> verifyOtp(
             @Valid @RequestBody OtpVerifyDTO otpVerifyDTO) throws JsonProcessingException {
 
-        String message = authService.verifyOtp(otpVerifyDTO);
+        String message = authService.verifyOtpSaveUser(otpVerifyDTO);
 
         return new ResponseEntity<>(
                 new StandardResponse(200, "OTP Verification", message),
@@ -61,10 +61,11 @@ public class AuthController {
 
     @PostMapping("/email-change/request")
     public ResponseEntity<StandardResponse> requestEmailChange(
-            @RequestBody EmailChangeRequestDTO dto
-    ) {
+            @RequestParam("userId") int userId,
+            @RequestBody EmailChangeRequestDTO emailChangeRequestDTO
+    ) throws JsonProcessingException {
 
-        String msg = authService.requestEmailChange(dto.getOldEmail(), dto.getNewEmail());
+        String msg = authService.requestEmailChange(userId,emailChangeRequestDTO);
 
         return new ResponseEntity<>(
                 new StandardResponse(200, "Success", msg),
@@ -74,10 +75,11 @@ public class AuthController {
 
     @PostMapping("/email-change/verify")
     public ResponseEntity<?> verifyEmailChange(
+            @RequestHeader("X-User-Id") int userId,
             @RequestBody OtpVerifyDTO dto
     ) {
 
-        String msg = authService.verifyEmailChange(dto);
+        String msg = authService.verifyEmailChange(userId,dto);
 
         return new ResponseEntity<>(
                 new StandardResponse(200, "Success", msg),

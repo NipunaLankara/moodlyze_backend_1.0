@@ -12,7 +12,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface AuthApiClient {
 
     @PostMapping("/api/v1/auth/email-change/request")
-    StandardResponse requestEmailChange(@RequestBody EmailChangeRequestDTO emailChangeRequestDTO);
+    StandardResponse requestEmailChange(
+            @RequestParam("userId") int userId,
+            @RequestBody EmailChangeRequestDTO emailChangeRequestDTO
+    );
 
     @DeleteMapping("/api/v1/auth/internal/delete")
     StandardResponse  deleteAuthUser(@RequestParam("email") String email);

@@ -27,6 +27,9 @@ public class AuthUsers {
     @Column(name = "password")
     private String password;
 
+    @Column(name = "user_id", nullable = false, updatable = false)
+    private int userId;
+
     @Column(name = "opt_status")
     private String optStatus="PENDING_OTP";   // PENDING_OTP,VERIFY
 

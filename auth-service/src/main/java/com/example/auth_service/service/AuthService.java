@@ -1,5 +1,6 @@
 package com.example.auth_service.service;
 
+import com.example.auth_service.dto.request.EmailChangeRequestDTO;
 import com.example.auth_service.dto.request.LoginRequestDTO;
 import com.example.auth_service.dto.request.OtpVerifyDTO;
 import com.example.auth_service.dto.request.UserSaveDTO;
@@ -12,15 +13,15 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 public interface AuthService extends UserDetailsService {
     String saveNewUser(@Valid UserSaveDTO userSaveDTO) throws JsonProcessingException;
 
-    String verifyOtp(@Valid OtpVerifyDTO otpVerifyDTO) throws JsonProcessingException;
+    String verifyOtpSaveUser(@Valid OtpVerifyDTO otpVerifyDTO) throws JsonProcessingException;
 
     UserDetails loadUserByUsername(String username) throws UsernameNotFoundException;
 
     Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception;
 
-    String requestEmailChange(String oldEmail, String newEmail);
+    String requestEmailChange(int userId, EmailChangeRequestDTO emailChangeRequestDTO) throws JsonProcessingException;
 
-    String verifyEmailChange(OtpVerifyDTO dto);
+    String verifyEmailChange(int userId, OtpVerifyDTO dto);
 
     String deleteAuthUser(String email);
 }

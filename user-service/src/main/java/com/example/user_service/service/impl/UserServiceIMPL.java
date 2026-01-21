@@ -25,19 +25,16 @@ public class UserServiceIMPL implements UserService {
     private AuthApiClient authApiClient;
 
     @Override
-    public boolean saveNewUser(UserSaveDTO userSaveDTO) {
+    public int saveNewUser(UserSaveDTO userSaveDTO) {
 
-        try {
-            if (userRepo.existsByEmail(userSaveDTO.getEmail())) {
-                throw new AlreadyExistsException("User already exists");
-            }
-            User user = userMapper.dtoToEntity(userSaveDTO);
-            userRepo.save(user);
-            return true;
-
-        } catch (Exception e) {
-            throw new RuntimeException("Internal server error", e);
+        if (userRepo.existsByEmail(userSaveDTO.getEmail())) {
+            throw new AlreadyExistsException("User already exists");
         }
+
+        User user = userMapper.dtoToEntity(userSaveDTO);
+        User savedUser = userRepo.save(user);
+
+        return savedUser.getUserId();
     }
 
     @Override
@@ -91,7 +88,7 @@ public class UserServiceIMPL implements UserService {
                     user.getEmail(),
                     dto.getEmail()
             );
-            StandardResponse response = authApiClient.requestEmailChange(emailChangeRequestDTO);
+            StandardResponse response = authApiClient.requestEmailChange(userId,emailChangeRequestDTO);
 
 //            System.out.println("Email change response  in authapiclient " + response);
 
@@ -102,15 +99,22 @@ public class UserServiceIMPL implements UserService {
     }
 
     @Override
-    public String updateEmail(String oldEmail, String newEmail) {
+    public String updateEmail(int userId, String newEmail) {
 
-        if (!userRepo.existsByEmail(oldEmail)) {
-            throw new ResourceNotFoundException("User not found with email: " + oldEmail);
+        if (!userRepo.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found with user id: " + userId);
         } else {
-            User user = userRepo.findByEmail(oldEmail);
-            user.setEmail(newEmail);
-            userRepo.save(user);
-            return "Email updated successfully";
+
+            try {
+                User user = userRepo.findByUserId(userId);
+                user.setEmail(newEmail);
+                userRepo.save(user);
+                return "Email updated successfully";
+
+            } catch (Exception e) {
+                throw new RuntimeException("Internal server error", e);
+            }
+
         }
     }
 

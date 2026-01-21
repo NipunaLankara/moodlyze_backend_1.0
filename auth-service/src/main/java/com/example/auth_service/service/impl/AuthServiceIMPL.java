@@ -1,17 +1,16 @@
 package com.example.auth_service.service.impl;
 
-import com.example.auth_service.dto.request.EmailRequestDTO;
-import com.example.auth_service.dto.request.LoginRequestDTO;
-import com.example.auth_service.dto.request.OtpVerifyDTO;
-import com.example.auth_service.dto.request.UserSaveDTO;
+import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.LoginResponseDTO;
 import com.example.auth_service.entity.AuthUsers;
 import com.example.auth_service.exception.AlreadyExistsException;
+import com.example.auth_service.exception.DownstreamServiceException;
 import com.example.auth_service.repo.AuthUserRepo;
 import com.example.auth_service.service.*;
 import com.example.auth_service.util.JwtUtil;
 import com.example.auth_service.util.OtpGenerator;
 import com.example.auth_service.util.OtpVerify;
+import com.example.auth_service.util.StandardResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -101,9 +100,9 @@ public class AuthServiceIMPL implements AuthService {
 
 
     //         VERIFY OTP — SAVE USER
-    // -----------------------------------
+
     @Override
-    public String verifyOtp(OtpVerifyDTO otpVerifyDTO) throws JsonProcessingException {
+    public String verifyOtpSaveUser(OtpVerifyDTO otpVerifyDTO) throws JsonProcessingException {
 
         String email = otpVerifyDTO.getEmail();
 
@@ -121,43 +120,46 @@ public class AuthServiceIMPL implements AuthService {
         // Convert JSON back to object
         UserSaveDTO userSaveDTO = objectMapper.readValue(tempJson, UserSaveDTO.class);
 
+        int userId;
 
-        //       SAVE USER IN DATABASE
-        // -----------------------------------
-        AuthUsers authUser = new AuthUsers(
-                userSaveDTO.getEmail(),
-                passwordEncoder.encode(userSaveDTO.getPassword())
-        );
+        try {
+            StandardResponse response = userApiClient.save(userSaveDTO);
 
+            if (response == null || response.getData() == null) {
+                throw new DownstreamServiceException("Invalid response from user-service");
+            }
+
+            userId = (int) response.getData();
+
+        } catch (feign.RetryableException ex) {
+            // service DOWN / connection refused / timeout
+            throw new DownstreamServiceException(
+                    "User service is unavailable. Please try again later.",
+                    ex
+            );
+
+        } catch (feign.FeignException ex) {
+            // user-service returned 4xx / 5xx
+            throw new DownstreamServiceException(
+                    "User service error occurred",
+                    ex
+            );
+        }
+
+
+        //       SAVE AUTH USER IN DATABASE
+        AuthUsers authUser = new AuthUsers();
+        authUser.setUsername(userSaveDTO.getEmail());
+        authUser.setPassword(passwordEncoder.encode(userSaveDTO.getPassword()));
+        authUser.setUserId(userId);
         authUser.setAcvtiveStatus(true);
         authUser.setOptStatus("ACTIVE");
 
         authUserRepo.save(authUser);
 
-
-        //   CALL USER-SERVICE AFTER VERIFIED
-        // -----------------------------------
-        try {
-//            Boolean saved = restTemplate.postForObject(
-//                    "http://localhost:8082/api/v1/user/save",
-//                    userSaveDTO,
-//                    Boolean.class
-//            );
-
-            boolean saved = userApiClient.save(userSaveDTO);
-
-            if (!saved) {
-                throw new RuntimeException("User-service failed to save user details.");
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException("User-service unavailable. Try again later.", e);
-        }
-
-        // Clean Redis temporary data
         stringRedisTemplate.delete(tempKey);
 
-        return "Account created & verified successfully!";
+        return "Account created & verified successfully";
     }
 
     @Override
@@ -226,19 +228,22 @@ public class AuthServiceIMPL implements AuthService {
     }
 
     @Override
-    public String requestEmailChange(String oldEmail, String newEmail) {
+    public String requestEmailChange(int userId, EmailChangeRequestDTO emailChangeRequestDTO) {
+
+        String oldEmail = emailChangeRequestDTO.getOldEmail();
+        String newEmail = emailChangeRequestDTO.getNewEmail();
 
         if (oldEmail.equals(newEmail)) {
             throw new RuntimeException("New email cannot be same as old email");
         }
 
-        AuthUsers user = authUserRepo.findByUsername(oldEmail);
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found");
-        }
-
         if (authUserRepo.existsByUsername(newEmail)) {
             throw new AlreadyExistsException("Email already exists");
+        }
+
+        AuthUsers user = authUserRepo.findByUserId(userId);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found");
         }
 
         // -------- Generate OTP (reuse existing)
@@ -251,12 +256,12 @@ public class AuthServiceIMPL implements AuthService {
                 Duration.ofMinutes(5)
         );
 
-        // -------- Save pending email change
-        stringRedisTemplate.opsForValue().set(
-                "email-change:" + oldEmail,   // here when user verify otp insert older email,can not change it because it used - Update auth-service DB
-                newEmail,
-                Duration.ofMinutes(10)
-        );
+//        // -------- Save pending email change
+//        stringRedisTemplate.opsForValue().set(
+//                "email-change:" + newEmail,   // Fix --- here when user verify otp insert older email,can not change it because it used - Update auth-service DB
+//                newEmail,
+//                Duration.ofMinutes(10)
+//        );
 
         // -------- Send OTP email (reuse existing email-service)
         EmailRequestDTO mail = new EmailRequestDTO();
@@ -266,14 +271,16 @@ public class AuthServiceIMPL implements AuthService {
 
         emailApiClient.sendEmail(mail);
 
-        return "OTP sent to new email address";
+        return "OTP sent to new email address "+otp;
     }
 
     @Override
-    public String verifyEmailChange(OtpVerifyDTO dto) {
+    public String verifyEmailChange(int userId, OtpVerifyDTO dto) {
 
-        String redisKey = "email-change:" + dto.getEmail();
-        String newEmail = stringRedisTemplate.opsForValue().get(redisKey);
+//        String redisKey = "email-change:" + dto.getEmail();
+//        String newEmail = stringRedisTemplate.opsForValue().get(redisKey);
+
+        String newEmail = dto.getEmail();
 
         if (newEmail == null) {
             throw new RuntimeException("Email change request expired");
@@ -283,7 +290,7 @@ public class AuthServiceIMPL implements AuthService {
         otpVerify.verifyAndDelete(newEmail, dto.getOtp());
 
         // -------- Update auth-service DB
-        AuthUsers user = authUserRepo.findByUsername(dto.getEmail());   // here use older email.........
+        AuthUsers user = authUserRepo.findByUserId(userId);  // Fix -- here use older email.........
         if (user == null) {
             throw new UsernameNotFoundException("User not found");
         }
@@ -292,10 +299,10 @@ public class AuthServiceIMPL implements AuthService {
         authUserRepo.save(user);
 
         // -------- Sync user-service
-        userApiClient.updateEmail(dto.getEmail(), newEmail);
+        userApiClient.updateEmail(userId,newEmail);
 
-        // -------- Clean Redis
-        stringRedisTemplate.delete(redisKey);
+//        // -------- Clean Redis
+//        stringRedisTemplate.delete(redisKey);
 
         return "Email updated successfully";
     }

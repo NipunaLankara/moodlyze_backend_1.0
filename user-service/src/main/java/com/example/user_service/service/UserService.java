@@ -7,7 +7,7 @@ import com.example.user_service.dto.response.UserResponseDTO;
 import jakarta.validation.Valid;
 
 public interface UserService {
-    boolean saveNewUser(@Valid UserSaveDTO userSaveDTO);
+    int saveNewUser(@Valid UserSaveDTO userSaveDTO);
 
     String getRole(String email);
 
@@ -15,7 +15,7 @@ public interface UserService {
 
     Object updateProfile(int userId, UserProfileUpdateDTO dto);
 
-    String updateEmail(String oldEmail, String newEmail);
+    String updateEmail(int userId, String newEmail);
 
     Object deleteUser(int userId);
 

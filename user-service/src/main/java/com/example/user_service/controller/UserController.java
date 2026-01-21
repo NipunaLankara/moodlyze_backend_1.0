@@ -18,23 +18,18 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-//    @PostMapping("/save")
-//    public ResponseEntity<StandardResponse> save(@Valid @RequestBody UserSaveDTO userSaveDTO) {
-//        System.out.println(userSaveDTO.getName());
-//        String message = userService.saveNewUser(userSaveDTO);
-//
-//        return new ResponseEntity<StandardResponse>(
-//                new StandardResponse(200,"User Registered Successfully",message),
-//                HttpStatus.CREATED
-//        );
-//    }
 
     @PostMapping("/save")
-    public boolean save(@Valid @RequestBody UserSaveDTO userSaveDTO) {
-        System.out.println(userSaveDTO.getName());
-        boolean message = userService.saveNewUser(userSaveDTO);
-        return message;
+    public ResponseEntity<StandardResponse> save(
+            @Valid @RequestBody UserSaveDTO dto
+    ) {
+        int userId = userService.saveNewUser(dto);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Success", userId)
+        );
     }
+
 
     @GetMapping("/get-1")
     public String getMessage(){
@@ -79,12 +74,13 @@ public class UserController {
         );
     }
 
+    // This call in auth-service if user change email....
     @PutMapping("/update-email")
     public ResponseEntity<StandardResponse> updateEmail(
-            @RequestParam("oldEmail") String oldEmail,
+            @RequestParam("userId") int userId,
             @RequestParam("newEmail") String newEmail
     ){
-        String msg = userService.updateEmail(oldEmail,newEmail);
+        String msg = userService.updateEmail(userId,newEmail);
 
         return ResponseEntity.ok(
                 new StandardResponse(200, "Success", msg)
