@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tasks")
-@CrossOrigin
+
 public class TaskController {
     @Autowired
     private TaskSerivce taskSerivce;
