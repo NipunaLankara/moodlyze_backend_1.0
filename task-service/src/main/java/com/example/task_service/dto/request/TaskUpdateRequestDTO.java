@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @AllArgsConstructor
@@ -17,5 +18,6 @@ public class TaskUpdateRequestDTO {
     private Priority priority;
     private Integer estimatedTimeMinutes;
     private LocalTime deadlineTime;
+    private LocalDate taskDate;
     private TaskStatus status;
 }

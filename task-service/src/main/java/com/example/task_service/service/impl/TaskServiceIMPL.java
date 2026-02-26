@@ -43,7 +43,7 @@ public class TaskServiceIMPL  implements TaskSerivce {
 
             // Using streams to map entities to DTOs
             return taskList.stream()
-                    .map(taskMapper::entityToShortResponse)
+                    .map(taskMapper::entityToDto)
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
@@ -98,6 +98,9 @@ public class TaskServiceIMPL  implements TaskSerivce {
         }
         if (dto.getStatus() != null) {
             task.setStatus(dto.getStatus());
+        }
+        if (dto.getTaskDate() != null) {
+            task.setTaskDate(dto.getTaskDate());
         }
 
         Task updatedTask = taskRepo.save(task);
