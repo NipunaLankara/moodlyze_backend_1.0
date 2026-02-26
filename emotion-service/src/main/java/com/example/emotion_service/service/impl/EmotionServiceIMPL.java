@@ -6,9 +6,7 @@ import com.example.emotion_service.dto.TextEmotionRequestDTO;
 import com.example.emotion_service.entity.EmotionRecord;
 import com.example.emotion_service.exception.EmotionDetectionException;
 import com.example.emotion_service.repo.EmotionRepo;
-import com.example.emotion_service.service.AiServiceClient;
-import com.example.emotion_service.service.EmotionMlClient;
-import com.example.emotion_service.service.EmotionService;
+import com.example.emotion_service.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,14 +18,17 @@ public class EmotionServiceIMPL implements EmotionService {
     @Autowired
     private EmotionRepo emotionRepo;
     @Autowired
-    private EmotionMlClient emotionMlClient;
+    private EmotionImageMlClient emotionImageMlClient;
+    @Autowired
+    private EmotionSpeechMlClient emotionSpeechMlClient;
     @Autowired
     private AiServiceClient aiServiceClient;
 
     @Override
     public Object detectFromImage(MultipartFile file, int userId) {
         try {
-            FastApiResponseDTO response = emotionMlClient.detectImageEmotion(file);
+//            FastApiResponseDTO response = emotionMlClient.detectImageEmotion(file);
+            FastApiResponseDTO response = emotionImageMlClient.detectImageEmotion(file);
 
             if (response == null || response.getPredictions() == null || response.getPredictions().isEmpty()) {
                 throw new EmotionDetectionException("No emotion detected in the provided image.");
@@ -48,7 +49,8 @@ public class EmotionServiceIMPL implements EmotionService {
     @Override
     public Object detectFromSpeech(MultipartFile file, int userId) {
         try {
-            EmotionResultDTO result = emotionMlClient.detectSpeechEmotion(file);
+//            EmotionResultDTO result = emotionMlClient.detectSpeechEmotion(file);
+              EmotionResultDTO result = emotionSpeechMlClient.detectSpeechEmotion(file);
 
             if (result == null || result.getEmotion() == null) {
                 throw new EmotionDetectionException("Could not analyze speech emotion.");
