@@ -8,6 +8,7 @@ import lombok.Data;
 public class AnalysisResponseDTO {
     private String state;        // REST_REQUIRED or READY_TO_WORK
     private String detectedMood;
-    private String aiAdvice;     // Suggestions or Analysis
+    private String message;      // System message
+//    private String aiAdvice;     // Suggestions or Analysis
     private Object taskData;     // Null if mood is bad
 }
