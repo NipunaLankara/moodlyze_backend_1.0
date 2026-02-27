@@ -4,4 +4,6 @@ import com.example.analyze_service.dto.AnalysisResponseDTO;
 
 public interface AnalyzeService {
     AnalysisResponseDTO processUserStatus(int userId, String email);
+
+    void completeSchedulePart(Long id);
 }

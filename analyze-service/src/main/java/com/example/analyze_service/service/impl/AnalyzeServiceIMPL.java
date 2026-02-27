@@ -50,10 +50,21 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
     public AnalysisResponseDTO processUserStatus(int userId, String email) {
 
         //  Get Current Mood
-        String currentMood = (String) emotionClient
-                .getLatestEmotion(userId)
-                .getBody()
-                .getData();
+        String currentMood = "NEUTRAL"; // default mood
+
+        try {
+            StandardResponse emotionResponse = emotionClient
+                    .getLatestEmotion(userId)
+                    .getBody();
+
+            if (emotionResponse != null && emotionResponse.getData() != null) {
+                currentMood = emotionResponse.getData().toString();
+            }
+
+        } catch (Exception e) {
+            // Log error but continue with default mood
+            System.out.println("Emotion service unavailable or no data found. Using default mood: NEUTRAL");
+        }
 
         if (isBadMood(currentMood)) {
             return new AnalysisResponseDTO(
@@ -65,9 +76,19 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         }
 
         // Get Today's Pending Tasks
-        StandardResponse response = taskClient
-                .getTodayTasksByStatus("PENDING", userId)
-                .getBody();
+        StandardResponse response;
+        try {
+            response = taskClient
+                    .getTodayTasksByStatus("PENDING", userId)
+                    .getBody();
+        } catch (feign.FeignException.NotFound e) {
+            // Task-service returned 404
+            throw new NotFoundException("No pending tasks found for today.");
+
+        } catch (feign.FeignException e) {
+            // Other feign errors (500, 400 etc.)
+            throw new RuntimeException("Task service unavailable. Please try again later.");
+        }
 
         List<TaskDTO> tasks = mapper.convertValue(
                 response.getData(),
@@ -99,7 +120,10 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
 
         // Fetch saved schedule
         List<TaskSchedule> savedSchedules =
-                scheduleRepo.findByAnalysisIdOrderByStartTimeAsc(analysis.getId());
+                scheduleRepo.findByAnalysisIdAndStatusOrderByStartTimeAsc(
+                        analysis.getId(),
+                        "PENDING"
+                );
 
         if (savedSchedules.isEmpty()) {
             throw new NotFoundException("Failed to generate schedule for today.");
@@ -109,11 +133,13 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         List<ScheduleResponseDTO> scheduleResponse =
                 savedSchedules.stream().map(s -> {
                     ScheduleResponseDTO dto = new ScheduleResponseDTO();
+                    dto.setId(s.getId());
                     dto.setDisplayTitle(s.getDisplayTitle());
                     dto.setStartTime(s.getStartTime());
                     dto.setEndTime(s.getEndTime());
                     dto.setBreak(s.isBreak());
                     dto.setPartNumber(s.getPartNumber());
+                    dto.setTaskId(s.getTaskId());
                     return dto;
                 }).toList();
         StringBuilder scheduleText = new StringBuilder();
@@ -160,6 +186,8 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         );
     }
 
+
+
     /**
      * Generate and save schedule with:
      * - Max 90 minutes per task part
@@ -191,6 +219,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 schedule.setStartTime(currentTime);
                 schedule.setEndTime(endTime);
                 schedule.setBreak(false);
+                schedule.setStatus("PENDING");
                 scheduleRepo.save(schedule);
 
                 currentTime = endTime;
@@ -205,6 +234,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 breakSchedule.setStartTime(currentTime);
                 breakSchedule.setEndTime(currentTime.plusMinutes(10));
                 breakSchedule.setBreak(true);
+                breakSchedule.setStatus("PENDING");
                 scheduleRepo.save(breakSchedule);
 
                 currentTime = currentTime.plusMinutes(10);
@@ -214,5 +244,38 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
 
     private boolean isBadMood(String mood) {
         return List.of("SAD", "STRESSED", "ANGRY").contains(mood.toUpperCase());
+    }
+
+    @Override
+    public void completeSchedulePart(Long scheduleId) {
+
+        TaskSchedule schedule = scheduleRepo.findById(scheduleId)
+                .orElseThrow(() -> new NotFoundException("Schedule part not found"));
+
+        if (schedule.isBreak()) {
+            throw new RuntimeException("Cannot complete a break session.");
+        }
+
+        //  Mark this schedule part completed
+        schedule.setStatus("COMPLETED");
+        scheduleRepo.save(schedule);
+
+        Long taskId = schedule.getTaskId();
+
+        // Check if any PENDING parts remain for this task
+        List<TaskSchedule> remainingParts =
+                scheduleRepo.findByTaskIdAndStatus(taskId, "PENDING");
+
+        boolean hasPendingParts = remainingParts.stream()
+                .anyMatch(s -> !s.isBreak());
+
+        // If no pending parts → mark task COMPLETED in task-service
+        if (!hasPendingParts) {
+            try {
+                taskClient.markTaskCompleted(taskId);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to update task status in task-service");
+            }
+        }
     }
 }

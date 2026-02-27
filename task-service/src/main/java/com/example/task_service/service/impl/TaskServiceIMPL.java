@@ -121,6 +121,17 @@ public class TaskServiceIMPL  implements TaskSerivce {
                 .map(taskMapper::entityToDto)
                 .toList();
     }
+
+    @Override
+    public void markTaskCompleted(Long taskId) {
+
+        Task task = taskRepo.findById(taskId)
+                .orElseThrow(() -> new NotFoundException("Task not found"));
+
+        task.setStatus(TaskStatus.COMPLETED);
+        taskRepo.save(task);
+    }
+
     @Override
     public TaskResponseDTO updateTask(Long taskId, int userId, TaskUpdateRequestDTO dto) {
 

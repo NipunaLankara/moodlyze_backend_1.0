@@ -25,4 +25,7 @@ public class TaskSchedule {
     private boolean isBreak;
 
     private Integer partNumber;  // null if not split
+
+    @Column(nullable = false)
+    private String status = "PENDING"; // PENDING, COMPLETED
 }

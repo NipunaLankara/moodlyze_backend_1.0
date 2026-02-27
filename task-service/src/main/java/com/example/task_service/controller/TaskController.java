@@ -140,6 +140,16 @@ public class TaskController {
         );
     }
 
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<StandardResponse> completeTask(
+            @PathVariable Long id
+    ) {
+        taskSerivce.markTaskCompleted(id);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Task marked as COMPLETED", null)
+        );
+    }
 
 
 

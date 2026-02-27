@@ -23,4 +23,6 @@ public interface TaskSerivce {
     List<TaskResponseDTO> getTodayTasksByStatus(TaskStatus status, int userId);
 
     List<TaskResponseDTO> getOverdueTasks(int userId);
+
+    void markTaskCompleted(Long id);
 }

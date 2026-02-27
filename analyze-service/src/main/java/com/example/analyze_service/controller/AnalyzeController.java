@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/analyze")
 @RequiredArgsConstructor
-@CrossOrigin
 public class AnalyzeController {
 
     private final AnalyzeService analyzeService;
@@ -32,6 +31,21 @@ public class AnalyzeController {
         return new ResponseEntity<>(
                 new StandardResponse(200, message, response),
                 HttpStatus.OK
+        );
+    }
+
+    @PutMapping("/schedule/{id}/complete")
+    public ResponseEntity<StandardResponse> completeSchedule(
+            @PathVariable Long id
+    ) {
+        analyzeService.completeSchedulePart(id);
+
+        return ResponseEntity.ok(
+                new StandardResponse(
+                        200,
+                        "Schedule part completed successfully",
+                        null
+                )
         );
     }
 }

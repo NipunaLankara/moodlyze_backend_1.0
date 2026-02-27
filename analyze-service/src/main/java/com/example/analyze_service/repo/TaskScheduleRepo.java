@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface TaskScheduleRepo extends JpaRepository<TaskSchedule, Long> {
     List<TaskSchedule> findByAnalysisIdOrderByStartTimeAsc(Long id);
+
+    List<TaskSchedule> findByAnalysisIdAndStatusOrderByStartTimeAsc(Long id, String pending);
+
+    List<TaskSchedule> findByTaskIdAndStatus(Long taskId, String pending);
 }
