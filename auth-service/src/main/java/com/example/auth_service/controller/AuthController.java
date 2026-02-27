@@ -99,5 +99,18 @@ public class AuthController {
 
     }
 
+    @PutMapping("/2fa/enable-disable/{id}")
+    public ResponseEntity<StandardResponse> enableOrDisable2FA (
+            @RequestHeader("X-User-Id") int userId,
+            @RequestParam (value = "status") boolean status
+    ) {
+        String message = authService.set2fa(userId,status);
+        return new ResponseEntity<>(
+                new StandardResponse(200, "2FA Changed", message),
+                HttpStatus.OK
+        );
+
+    }
+
 
 }

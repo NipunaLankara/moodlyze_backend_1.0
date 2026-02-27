@@ -36,6 +36,9 @@ public class AuthUsers {
     @Column(name = "is_active")
     private boolean acvtiveStatus=false;   // false,true
 
+    @Column(name = "two_factor_enabled")
+    private boolean twoFactorEnabled = false;
+
     @OneToMany(mappedBy = "authUserId")
     @JsonIgnore
     private Set<LoginActivity> loginActivities;

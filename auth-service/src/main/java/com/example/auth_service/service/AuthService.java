@@ -24,4 +24,6 @@ public interface AuthService extends UserDetailsService {
     String verifyEmailChange(int userId, OtpVerifyDTO dto);
 
     String deleteAuthUser(String email);
+
+    String set2fa(int userId, boolean status);
 }

@@ -320,5 +320,16 @@ public class AuthServiceIMPL implements AuthService {
         return "User deleted successfully";
     }
 
+    @Override
+    public String set2fa(int id, boolean status) {
+        AuthUsers authUsers = authUserRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        authUsers.setTwoFactorEnabled(status);
+        authUserRepo.save(authUsers);
+
+        return status ? "2FA Enabled" : "2FA Disabled";
+
+    }
 
 }
