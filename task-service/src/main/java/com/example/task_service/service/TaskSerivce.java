@@ -19,4 +19,8 @@ public interface TaskSerivce {
     TaskResponseDTO updateTask(Long taskId, int userId, TaskUpdateRequestDTO taskUpdateRequestDTO);
 
     String delete(Long taskId, int userId);
+
+    List<TaskResponseDTO> getTodayTasksByStatus(TaskStatus status, int userId);
+
+    List<TaskResponseDTO> getOverdueTasks(int userId);
 }

@@ -15,4 +15,10 @@ public interface TaskClient {
             @PathVariable("status") String status,
             @RequestHeader("X-User-Id") int userId
     );
+
+    @GetMapping("/api/v1/tasks/get-today-by-status/{status}")
+    ResponseEntity<StandardResponse> getTodayTasksByStatus(
+            @PathVariable("status") String status,
+            @RequestHeader("X-User-Id") int userId
+    );
 }

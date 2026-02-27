@@ -74,6 +74,43 @@ public class TaskController {
 
     }
 
+    @GetMapping("/get-today-by-status/{status}")
+    public ResponseEntity<StandardResponse> getTodayTasksByStatus(
+            @PathVariable("status") TaskStatus status,
+            @RequestHeader("X-User-Id") int userId
+    ) {
+
+        List<TaskResponseDTO> list =
+                taskSerivce.getTodayTasksByStatus(status, userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(
+                        200,
+                        "Today's Tasks with status = " + status,
+                        list
+                ),
+                HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/get-overdue")
+    public ResponseEntity<StandardResponse> getOverdueTasks(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+
+        List<TaskResponseDTO> list =
+                taskSerivce.getOverdueTasks(userId);
+
+        return new ResponseEntity<>(
+                new StandardResponse(
+                        200,
+                        "Overdue Tasks",
+                        list
+                ),
+                HttpStatus.OK
+        );
+    }
+
     @PutMapping("/update/{id}")
     public ResponseEntity<StandardResponse> updateTask(
             @PathVariable("id") Long taskId,

@@ -1,6 +1,7 @@
 package com.example.analyze_service.service.impl;
 
 import com.example.analyze_service.dto.AnalysisResponseDTO;
+import com.example.analyze_service.dto.ScheduleResponseDTO;
 import com.example.analyze_service.dto.TaskDTO;
 import com.example.analyze_service.entity.TaskAnalysis;
 import com.example.analyze_service.entity.TaskSchedule;
@@ -57,7 +58,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
 
         // Get Pending Tasks
         StandardResponse response = taskClient
-                .getTasksByStatus("PENDING", userId)
+                .getTodayTasksByStatus("PENDING", userId)
                 .getBody();
 
         List<TaskDTO> tasks = mapper.convertValue(
@@ -94,40 +95,52 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         // Generate Structured Schedule
         generateAndSaveSchedule(tasks, analysis.getId());
 
+// Fetch saved schedule
+        List<TaskSchedule> savedSchedules =
+                scheduleRepo.findByAnalysisIdOrderByStartTimeAsc(analysis.getId());
+
+// Convert to DTO
+        List<ScheduleResponseDTO> scheduleResponse =
+                savedSchedules.stream().map(s -> {
+                    ScheduleResponseDTO dto = new ScheduleResponseDTO();
+                    dto.setDisplayTitle(s.getDisplayTitle());
+                    dto.setStartTime(s.getStartTime());
+                    dto.setEndTime(s.getEndTime());
+                    dto.setBreak(s.isBreak());
+                    dto.setPartNumber(s.getPartNumber());
+                    return dto;
+                }).toList();
+
         return new AnalysisResponseDTO(
                 "READY_TO_WORK",
                 currentMood,
                 "Structured schedule generated successfully.",
-                tasks
+                scheduleResponse
         );
     }
-
     private void generateAndSaveSchedule(List<TaskDTO> tasks, Long analysisId) {
 
-        LocalDate today = LocalDate.now();
-        LocalDateTime currentTime = LocalDateTime.of(today, LocalTime.of(8, 0));
-        LocalDateTime workEnd = LocalDateTime.of(today, LocalTime.of(17, 0));
-
-        int workCounter = 0;
+        // Start scheduling from now
+        LocalDateTime currentTime = LocalDateTime.now();
 
         for (TaskDTO task : tasks) {
 
-            int remaining = task.getEstimatedTimeMinutes();
+            int remaining = task.getEstimatedTimeMinutes(); // total task minutes
             int part = 1;
 
-            while (remaining > 0 && currentTime.isBefore(workEnd)) {
+            // Split task into 90-min parts
+            while (remaining > 0) {
 
-                int session = Math.min(remaining, 240);
+                int session = Math.min(remaining, 90); // max 90 minutes per part
                 LocalDateTime endTime = currentTime.plusMinutes(session);
 
-                if (endTime.isAfter(workEnd)) break;
-
+                // Create TaskSchedule for this part
                 TaskSchedule schedule = new TaskSchedule();
                 schedule.setAnalysisId(analysisId);
                 schedule.setTaskId(task.getId());
                 schedule.setTitle(task.getTitle());
 
-                if (task.getEstimatedTimeMinutes() > 240) {
+                if (task.getEstimatedTimeMinutes() > 90) {
                     schedule.setPartNumber(part);
                     schedule.setDisplayTitle(task.getTitle() + " (Part " + part + ")");
                 } else {
@@ -137,39 +150,27 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 schedule.setStartTime(currentTime);
                 schedule.setEndTime(endTime);
                 schedule.setBreak(false);
-
                 scheduleRepo.save(schedule);
 
-                currentTime = endTime;
+                currentTime = endTime; // move time forward
                 remaining -= session;
                 part++;
-                workCounter += session;
 
-                // Add break every 90 mins
-                if (workCounter >= 90) {
+                // Add 10-minute break after each part
+                TaskSchedule breakSchedule = new TaskSchedule();
+                breakSchedule.setAnalysisId(analysisId);
+                breakSchedule.setTitle("Short Break");
+                breakSchedule.setDisplayTitle("Short Break");
+                breakSchedule.setStartTime(currentTime);
+                breakSchedule.setEndTime(currentTime.plusMinutes(10));
+                breakSchedule.setBreak(true);
+                scheduleRepo.save(breakSchedule);
 
-                    LocalDateTime breakEnd = currentTime.plusMinutes(15);
-
-                    if (breakEnd.isBefore(workEnd)) {
-
-                        TaskSchedule breakSchedule = new TaskSchedule();
-                        breakSchedule.setAnalysisId(analysisId);
-                        breakSchedule.setTitle("Mental Recharge Break");
-                        breakSchedule.setDisplayTitle("Mental Recharge Break");
-                        breakSchedule.setStartTime(currentTime);
-                        breakSchedule.setEndTime(breakEnd);
-                        breakSchedule.setBreak(true);
-
-                        scheduleRepo.save(breakSchedule);
-
-                        currentTime = breakEnd;
-                    }
-
-                    workCounter = 0;
-                }
+                currentTime = currentTime.plusMinutes(10); // move time past break
             }
         }
     }
+
 
     private boolean isBadMood(String mood) {
         return List.of("SAD", "STRESSED", "ANGRY")

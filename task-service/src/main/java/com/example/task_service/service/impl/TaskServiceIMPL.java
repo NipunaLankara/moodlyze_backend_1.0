@@ -13,6 +13,7 @@ import com.example.task_service.service.TaskSerivce;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -73,6 +74,53 @@ public class TaskServiceIMPL  implements TaskSerivce {
                 .collect(Collectors.toList());
     }
 
+    // GET TODAY TASKS BY STATUS
+    @Override
+    public List<TaskResponseDTO> getTodayTasksByStatus(
+            TaskStatus status,
+            int userId
+    ) {
+
+        LocalDate today = LocalDate.now();
+
+        List<Task> tasks =
+                taskRepo.findByUserIdAndStatusAndTaskDate(
+                        userId,
+                        status,
+                        today
+                );
+
+        if (tasks.isEmpty()) {
+            throw new NotFoundException(
+                    "No tasks found for today with status: " + status
+            );
+        }
+
+        return tasks.stream()
+                .map(taskMapper::entityToDto)
+                .toList();
+    }
+
+    @Override
+    public List<TaskResponseDTO> getOverdueTasks(int userId) {
+
+        LocalDate today = LocalDate.now();
+
+        List<Task> tasks =
+                taskRepo.findByUserIdAndStatusAndTaskDateBefore(
+                        userId,
+                        TaskStatus.PENDING,
+                        today
+                );
+
+        if (tasks.isEmpty()) {
+            throw new NotFoundException("No overdue tasks found");
+        }
+
+        return tasks.stream()
+                .map(taskMapper::entityToDto)
+                .toList();
+    }
     @Override
     public TaskResponseDTO updateTask(Long taskId, int userId, TaskUpdateRequestDTO dto) {
 
@@ -118,6 +166,7 @@ public class TaskServiceIMPL  implements TaskSerivce {
             throw new NotFoundException("Task with id " + taskId + " not found for this user");
         }
     }
+
 
 
 }

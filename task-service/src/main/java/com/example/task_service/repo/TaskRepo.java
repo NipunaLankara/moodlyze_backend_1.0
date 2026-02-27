@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,4 +24,7 @@ public interface TaskRepo extends JpaRepository<Task, Long> {
     List<Task> findByStatusAndUserId(TaskStatus status, int userId);
 
 
+    List<Task> findByUserIdAndStatusAndTaskDate(int userId, TaskStatus status, LocalDate today);
+
+    List<Task> findByUserIdAndStatusAndTaskDateBefore(int userId, TaskStatus taskStatus, LocalDate today);
 }
