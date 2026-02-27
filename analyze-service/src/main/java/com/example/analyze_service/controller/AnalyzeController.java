@@ -19,8 +19,11 @@ public class AnalyzeController {
     @GetMapping("/process")
     public ResponseEntity<StandardResponse> getMoodBasedAnalysis(
             @RequestHeader("X-User-Id") int userId
+//            @RequestHeader("X-Email") String email
     ) {
-        AnalysisResponseDTO response = analyzeService.processUserStatus(userId);
+        System.out.println(userId);
+        String email = "nipunalankara@gmail.com";
+        AnalysisResponseDTO response = analyzeService.processUserStatus(userId,email);
 
         String message = response.getState().equals("REST_REQUIRED")
                 ? "User needs rest before working."

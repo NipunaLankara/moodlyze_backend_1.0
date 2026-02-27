@@ -1,13 +1,16 @@
 package com.example.analyze_service.service.impl;
 
 import com.example.analyze_service.dto.AnalysisResponseDTO;
+import com.example.analyze_service.dto.EmailRequestDTO;
 import com.example.analyze_service.dto.ScheduleResponseDTO;
 import com.example.analyze_service.dto.TaskDTO;
 import com.example.analyze_service.entity.TaskAnalysis;
 import com.example.analyze_service.entity.TaskSchedule;
+import com.example.analyze_service.exception.NotFoundException;
 import com.example.analyze_service.repo.AnalysisRepo;
 import com.example.analyze_service.repo.TaskScheduleRepo;
 import com.example.analyze_service.service.AnalyzeService;
+import com.example.analyze_service.service.EmailApiClient;
 import com.example.analyze_service.service.EmotionClient;
 import com.example.analyze_service.service.TaskClient;
 import com.example.analyze_service.util.StandardResponse;
@@ -16,8 +19,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.*;
-import java.util.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 public class AnalyzeServiceIMPL implements AnalyzeService {
@@ -37,16 +43,18 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
     @Autowired
     private ObjectMapper mapper;
 
-    @Override
-    public AnalysisResponseDTO processUserStatus(int userId) {
+    @Autowired
+    private EmailApiClient emailApiClient;
 
-        // Get Mood
+    @Override
+    public AnalysisResponseDTO processUserStatus(int userId, String email) {
+
+        //  Get Current Mood
         String currentMood = (String) emotionClient
                 .getLatestEmotion(userId)
                 .getBody()
                 .getData();
 
-        // If Bad Mood → REST_REQUIRED
         if (isBadMood(currentMood)) {
             return new AnalysisResponseDTO(
                     "REST_REQUIRED",
@@ -56,7 +64,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
             );
         }
 
-        // Get Pending Tasks
+        // Get Today's Pending Tasks
         StandardResponse response = taskClient
                 .getTodayTasksByStatus("PENDING", userId)
                 .getBody();
@@ -67,15 +75,10 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         );
 
         if (tasks.isEmpty()) {
-            return new AnalysisResponseDTO(
-                    "READY_TO_WORK",
-                    currentMood,
-                    "No pending tasks available.",
-                    tasks
-            );
+            throw new NotFoundException("No pending tasks found for today.");
         }
 
-        // Sort by Deadline → Priority
+        // Sort tasks by deadline → priority
         tasks.sort(
                 Comparator
                         .comparing(TaskDTO::getDeadlineTime,
@@ -88,18 +91,21 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         TaskAnalysis analysis = new TaskAnalysis();
         analysis.setUserId(userId);
         analysis.setMoodAtTime(currentMood);
-        analysis.setWorkingWindow("08:00-17:00");
         analysis.setCreatedAt(LocalDateTime.now());
         analysisRepo.save(analysis);
 
-        // Generate Structured Schedule
+        //  Generate and Save Task Schedule
         generateAndSaveSchedule(tasks, analysis.getId());
 
-// Fetch saved schedule
+        // Fetch saved schedule
         List<TaskSchedule> savedSchedules =
                 scheduleRepo.findByAnalysisIdOrderByStartTimeAsc(analysis.getId());
 
-// Convert to DTO
+        if (savedSchedules.isEmpty()) {
+            throw new NotFoundException("Failed to generate schedule for today.");
+        }
+
+        //  Convert schedule to DTO
         List<ScheduleResponseDTO> scheduleResponse =
                 savedSchedules.stream().map(s -> {
                     ScheduleResponseDTO dto = new ScheduleResponseDTO();
@@ -110,7 +116,42 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                     dto.setPartNumber(s.getPartNumber());
                     return dto;
                 }).toList();
+        StringBuilder scheduleText = new StringBuilder();
 
+// Show date once at the top
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
+
+        scheduleText.append("Hello,\n\n");
+        scheduleText.append("Here is your task schedule for ")
+                .append(today.format(dateFormatter))
+                .append(":\n\n");
+
+        for (ScheduleResponseDTO s : scheduleResponse) {
+            if (s.isBreak()) {
+                scheduleText.append(String.format("Break: %s - %s\n",
+                        s.getStartTime().format(timeFormatter),
+                        s.getEndTime().format(timeFormatter)));
+            } else {
+                scheduleText.append(String.format("%s: %s - %s%s\n",
+                        s.getDisplayTitle(),
+                        s.getStartTime().format(timeFormatter),
+                        s.getEndTime().format(timeFormatter),
+                        s.getPartNumber() != null ? " (Part " + s.getPartNumber() + ")" : ""));
+            }
+        }
+
+        scheduleText.append("\nHave a productive day!");
+
+// Send Email
+        EmailRequestDTO emailRequest = new EmailRequestDTO();
+        emailRequest.setTo(email);
+        emailRequest.setSubject("Your Daily Task Schedule");
+        emailRequest.setBody(scheduleText.toString());
+        emailApiClient.sendEmail(emailRequest);
+
+        // Return Response
         return new AnalysisResponseDTO(
                 "READY_TO_WORK",
                 currentMood,
@@ -118,45 +159,45 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 scheduleResponse
         );
     }
+
+    /**
+     * Generate and save schedule with:
+     * - Max 90 minutes per task part
+     * - 10-minute break after each part
+     */
     private void generateAndSaveSchedule(List<TaskDTO> tasks, Long analysisId) {
 
-        // Start scheduling from now
         LocalDateTime currentTime = LocalDateTime.now();
 
         for (TaskDTO task : tasks) {
-
-            int remaining = task.getEstimatedTimeMinutes(); // total task minutes
+            int remaining = task.getEstimatedTimeMinutes();
             int part = 1;
 
-            // Split task into 90-min parts
             while (remaining > 0) {
-
-                int session = Math.min(remaining, 90); // max 90 minutes per part
+                int session = Math.min(remaining, 90);
                 LocalDateTime endTime = currentTime.plusMinutes(session);
 
-                // Create TaskSchedule for this part
+                // Save Task Part
                 TaskSchedule schedule = new TaskSchedule();
                 schedule.setAnalysisId(analysisId);
                 schedule.setTaskId(task.getId());
                 schedule.setTitle(task.getTitle());
-
                 if (task.getEstimatedTimeMinutes() > 90) {
                     schedule.setPartNumber(part);
                     schedule.setDisplayTitle(task.getTitle() + " (Part " + part + ")");
                 } else {
                     schedule.setDisplayTitle(task.getTitle());
                 }
-
                 schedule.setStartTime(currentTime);
                 schedule.setEndTime(endTime);
                 schedule.setBreak(false);
                 scheduleRepo.save(schedule);
 
-                currentTime = endTime; // move time forward
+                currentTime = endTime;
                 remaining -= session;
                 part++;
 
-                // Add 10-minute break after each part
+                // Add 10-minute break
                 TaskSchedule breakSchedule = new TaskSchedule();
                 breakSchedule.setAnalysisId(analysisId);
                 breakSchedule.setTitle("Short Break");
@@ -166,23 +207,12 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 breakSchedule.setBreak(true);
                 scheduleRepo.save(breakSchedule);
 
-                currentTime = currentTime.plusMinutes(10); // move time past break
+                currentTime = currentTime.plusMinutes(10);
             }
         }
     }
 
-
     private boolean isBadMood(String mood) {
-        return List.of("SAD", "STRESSED", "ANGRY")
-                .contains(mood.toUpperCase());
-    }
-
-    private int getPriorityWeight(String priority) {
-        return switch (priority.toUpperCase()) {
-            case "HIGH" -> 1;
-            case "MEDIUM" -> 2;
-            case "LOW" -> 3;
-            default -> 4;
-        };
+        return List.of("SAD", "STRESSED", "ANGRY").contains(mood.toUpperCase());
     }
 }
