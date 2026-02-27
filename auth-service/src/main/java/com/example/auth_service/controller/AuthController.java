@@ -112,5 +112,16 @@ public class AuthController {
 
     }
 
+    @PostMapping("/verify-2fa")
+    public ResponseEntity<StandardResponse> verify2fa(@RequestBody OtpVerifyDTO dto) {
+
+        Object response = authService.verify2faAndLogin(dto);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "2FA verification successful", response),
+                HttpStatus.OK
+        );
+    }
+
 
 }

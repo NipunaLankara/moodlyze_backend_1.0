@@ -191,39 +191,108 @@ public class AuthServiceIMPL implements AuthService {
         return authorities;
     }
 
+//    @Override
+//    public Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception {
+//        // Authenticate FIRST (This throws BadCredentialsException if login fails)
+//        authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(dto.getUserEmail(), dto.getPassword())
+//        );
+//        String userEmail = dto.getUserEmail();
+//        Integer userId = userApiClient.getUserId(userEmail);
+//        String role = userApiClient.getRole(userEmail);   //  Use UserAPIClient.........
+//
+//        String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
+//
+//
+//        AuthUsers authUsers = authUserRepo.findByUsername(userEmail);
+//
+//        // Save Login Activity........
+//        String ipAddress = request.getRemoteAddr();
+//        String userAgent = request.getHeader("User-Agent");
+//        boolean isNew = loginActivityService.isNewDevice(authUsers, ipAddress, userAgent);
+//        loginActivityService.saveLoginActivity(authUsers, ipAddress, userAgent, isNew);
+//        if (isNew) {
+//            EmailRequestDTO request = new EmailRequestDTO();
+//            request.setTo(authUsers.getUsername());
+//            request.setSubject("New Login Detected");
+//            request.setBody(
+//                    "Hello,\n\n" +
+//                            "New login detected.\n" +
+//                            "IP: " + ipAddress + "\n" +
+//                            "Device: " + userAgent
+//            );
+//            emailApiClient.sendEmail(request);
+//
+//        }
+//        return new LoginResponseDTO(userEmail, role, generatedToken);
+//    }
+
     @Override
     public Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception {
-        // Authenticate FIRST (This throws BadCredentialsException if login fails)
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(dto.getUserEmail(), dto.getPassword())
-        );
+
         String userEmail = dto.getUserEmail();
+
+        // Authenticate password first
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(userEmail, dto.getPassword())
+        );
+
+        AuthUsers authUser = authUserRepo.findByUsername(userEmail);
+
+        //CHECK IF 2FA ENABLED
+        if (authUser.isTwoFactorEnabled()) {
+
+            String otp = otpGenerator.generateOtp();
+
+            // Save OTP in Redis (5 minutes)
+            stringRedisTemplate.opsForValue().set(
+                    "2fa:" + userEmail,
+                    otp,
+                    Duration.ofMinutes(5)
+            );
+
+            // Send Email
+            EmailRequestDTO mail = new EmailRequestDTO();
+            mail.setTo(userEmail);
+            mail.setSubject("Your 2FA Verification Code");
+            mail.setBody("Your login verification code is: " + otp);
+
+            emailApiClient.sendEmail(mail);
+
+            return "2FA_REQUIRED";
+        }
+
+        // If 2FA disabled → normal login
+        return generateJwtAndSaveLogin(authUser);
+    }
+
+    private LoginResponseDTO generateJwtAndSaveLogin(AuthUsers authUsers) {
+
+        String userEmail = authUsers.getUsername();
+
         Integer userId = userApiClient.getUserId(userEmail);
-        String role = userApiClient.getRole(userEmail);   //  Use UserAPIClient.........
+        String role = userApiClient.getRole(userEmail);
 
         String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
 
-
-        AuthUsers authUsers = authUserRepo.findByUsername(userEmail);
-
-        // Save Login Activity........
+        // Save login activity
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
+
         boolean isNew = loginActivityService.isNewDevice(authUsers, ipAddress, userAgent);
         loginActivityService.saveLoginActivity(authUsers, ipAddress, userAgent, isNew);
+
         if (isNew) {
             EmailRequestDTO request = new EmailRequestDTO();
-            request.setTo(authUsers.getUsername());
+            request.setTo(userEmail);
             request.setSubject("New Login Detected");
             request.setBody(
-                    "Hello,\n\n" +
-                            "New login detected.\n" +
-                            "IP: " + ipAddress + "\n" +
-                            "Device: " + userAgent
+                    "New login detected.\nIP: " + ipAddress +
+                            "\nDevice: " + userAgent
             );
             emailApiClient.sendEmail(request);
-
         }
+
         return new LoginResponseDTO(userEmail, role, generatedToken);
     }
 
@@ -330,6 +399,31 @@ public class AuthServiceIMPL implements AuthService {
 
         return status ? "2FA Enabled" : "2FA Disabled";
 
+    }
+
+    @Override
+    public Object verify2faAndLogin(OtpVerifyDTO dto) {
+
+        String email = dto.getEmail();
+
+        String key = "2fa:" + email;
+
+        String savedOtp = stringRedisTemplate.opsForValue().get(key);
+
+        if (savedOtp == null) {
+            throw new RuntimeException("OTP expired.");
+        }
+
+        if (!savedOtp.equals(dto.getOtp())) {
+            throw new RuntimeException("Invalid OTP.");
+        }
+
+        // Delete OTP (one time use)
+        stringRedisTemplate.delete(key);
+
+        AuthUsers authUser = authUserRepo.findByUsername(email);
+
+        return generateJwtAndSaveLogin(authUser);
     }
 
 }
