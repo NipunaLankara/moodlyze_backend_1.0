@@ -426,4 +426,63 @@ public class AuthServiceIMPL implements AuthService {
         return generateJwtAndSaveLogin(authUser);
     }
 
+    @Override
+    public String requestPasswordReset(String email) {
+
+        AuthUsers user = authUserRepo.findByUsername(email);
+
+        if (user == null) {
+            throw new UsernameNotFoundException("No account found with this email");
+        }
+
+        String otp = otpGenerator.generateOtp();
+
+        // Save in Redis (5 min)
+        stringRedisTemplate.opsForValue().set(
+                "reset:" + email,
+                otp,
+                Duration.ofMinutes(5)
+        );
+
+        // Send email
+        EmailRequestDTO mail = new EmailRequestDTO();
+        mail.setTo(email);
+        mail.setSubject("Password Reset OTP");
+        mail.setBody("Your password reset OTP is: " + otp);
+
+        emailApiClient.sendEmail(mail);
+
+        return "Password reset OTP sent to email";
+    }
+
+    @Override
+    public String verifyAndResetPassword(ResetPasswordDTO dto) {
+
+        String key = "reset:" + dto.getEmail();
+
+        String savedOtp = stringRedisTemplate.opsForValue().get(key);
+
+        if (savedOtp == null) {
+            throw new RuntimeException("OTP expired or invalid");
+        }
+
+        if (!savedOtp.equals(dto.getOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        // Delete OTP (one time use)
+        stringRedisTemplate.delete(key);
+
+        AuthUsers user = authUserRepo.findByUsername(dto.getEmail());
+
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found");
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        authUserRepo.save(user);
+
+        return "Password reset successfully";
+    }
+
 }

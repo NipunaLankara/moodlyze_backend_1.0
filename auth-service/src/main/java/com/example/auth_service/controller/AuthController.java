@@ -1,9 +1,6 @@
 package com.example.auth_service.controller;
 
-import com.example.auth_service.dto.request.EmailChangeRequestDTO;
-import com.example.auth_service.dto.request.LoginRequestDTO;
-import com.example.auth_service.dto.request.OtpVerifyDTO;
-import com.example.auth_service.dto.request.UserSaveDTO;
+import com.example.auth_service.dto.request.*;
 import com.example.auth_service.service.AuthService;
 import com.example.auth_service.util.StandardResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -123,5 +120,24 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<StandardResponse> forgotPassword(@RequestBody @Valid ResetPasswordDTO passwordRestRequestDTO) {
+        String result = authService.requestPasswordReset(passwordRestRequestDTO.getEmail());
 
+        return new ResponseEntity<>(
+                new StandardResponse(200,"Success",result),HttpStatus.OK
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<StandardResponse> resetPassword(
+            @RequestBody ResetPasswordDTO dto) {
+
+        String msg = authService.verifyAndResetPassword(dto);
+
+        return new ResponseEntity<>(
+                new StandardResponse(200, "Success", msg),
+                HttpStatus.OK
+        );
+    }
 }
