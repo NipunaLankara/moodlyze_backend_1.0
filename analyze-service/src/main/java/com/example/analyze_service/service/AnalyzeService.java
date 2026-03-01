@@ -6,4 +6,6 @@ public interface AnalyzeService {
     AnalysisResponseDTO processUserStatus(int userId, String email);
 
     void completeSchedulePart(Long id);
+
+    AnalysisResponseDTO getTodaySchedule(int userId);
 }

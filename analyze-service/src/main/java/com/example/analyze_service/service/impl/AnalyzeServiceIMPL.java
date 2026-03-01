@@ -253,7 +253,10 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 .orElseThrow(() -> new NotFoundException("Schedule part not found"));
 
         if (schedule.isBreak()) {
-            throw new RuntimeException("Cannot complete a break session.");
+            // Simply mark break as completed, no task-service call
+            schedule.setStatus("COMPLETED");
+            scheduleRepo.save(schedule);
+            return;
         }
 
         //  Mark this schedule part completed
@@ -262,20 +265,56 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
 
         Long taskId = schedule.getTaskId();
 
-        // Check if any PENDING parts remain for this task
-        List<TaskSchedule> remainingParts =
-                scheduleRepo.findByTaskIdAndStatus(taskId, "PENDING");
+        if (taskId != null) {
+            // Check if any PENDING parts remain for this task
+            List<TaskSchedule> remainingParts =
+                    scheduleRepo.findByTaskIdAndStatus(taskId, "PENDING");
 
-        boolean hasPendingParts = remainingParts.stream()
-                .anyMatch(s -> !s.isBreak());
+            boolean hasPendingParts = remainingParts.stream()
+                    .anyMatch(s -> !s.isBreak());
 
-        // If no pending parts → mark task COMPLETED in task-service
-        if (!hasPendingParts) {
-            try {
-                taskClient.markTaskCompleted(taskId);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to update task status in task-service");
+            // If no pending parts → mark task COMPLETED in task-service
+            if (!hasPendingParts) {
+                try {
+                    taskClient.markTaskCompleted(taskId);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to update task status in task-service");
+                }
             }
         }
+    }
+
+    @Override
+    public AnalysisResponseDTO getTodaySchedule(int userId) {
+        LocalDate today = LocalDate.now();
+        TaskAnalysis analysis = analysisRepo.findTopByUserIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                userId,
+                today.atStartOfDay(),
+                today.plusDays(1).atStartOfDay()
+        ).orElseThrow(() -> new NotFoundException("No schedule found for today"));
+
+        List<TaskSchedule> savedSchedules = scheduleRepo.findByAnalysisIdAndStatusOrderByStartTimeAsc(
+                analysis.getId(),
+                "PENDING"
+        );
+
+        List<ScheduleResponseDTO> scheduleResponse = savedSchedules.stream().map(s -> {
+            ScheduleResponseDTO dto = new ScheduleResponseDTO();
+            dto.setId(s.getId());
+            dto.setDisplayTitle(s.getDisplayTitle());
+            dto.setStartTime(s.getStartTime());
+            dto.setEndTime(s.getEndTime());
+            dto.setBreak(s.isBreak());
+            dto.setPartNumber(s.getPartNumber());
+            dto.setTaskId(s.getTaskId());
+            return dto;
+        }).toList();
+
+        return new AnalysisResponseDTO(
+                "READY_TO_WORK",
+                "NEUTRAL",
+                "Today's schedule fetched",
+                scheduleResponse
+        );
     }
 }

@@ -48,4 +48,16 @@ public class AnalyzeController {
                 )
         );
     }
+
+    @GetMapping("/today")
+    public ResponseEntity<StandardResponse> getTodaysSchedule(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+        // Let the service throw NotFoundException if no schedule exists
+        AnalysisResponseDTO response = analyzeService.getTodaySchedule(userId);
+
+        return ResponseEntity.ok(
+                new StandardResponse(200, "Today's schedule fetched", response)
+        );
+    }
 }
