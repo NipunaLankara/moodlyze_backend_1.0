@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="config-server" />
         <module name="auth-service" />
+        <module name="reminder-service" />
         <module name="analyze-service" />
         <module name="email-service" />
         <module name="emotion-service" />
@@ -29,6 +30,7 @@
       <module name="config-server" options="-parameters" />
       <module name="email-service" options="-parameters" />
       <module name="emotion-service" options="-parameters" />
+      <module name="reminder-service" options="-parameters" />
       <module name="service-registry" options="-parameters" />
       <module name="task-service" options="-parameters" />
       <module name="user-service" options="-parameters" />
