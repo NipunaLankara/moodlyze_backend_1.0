@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TextEmotionRequestDTO {
-    private String prompt;
+    private String text;
 }

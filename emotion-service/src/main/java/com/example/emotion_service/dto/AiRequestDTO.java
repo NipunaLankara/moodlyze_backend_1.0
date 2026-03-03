@@ -1,4 +1,4 @@
-package com.example.ai_service.dto;
+package com.example.emotion_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -7,6 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class AiRequestDTO {
-    private String text;
+public class SuggestionsRequestDTO {
+    private String emotion; // single word
 }

@@ -1,18 +1,12 @@
 package com.example.analyze_service.service.impl;
 
-import com.example.analyze_service.dto.AnalysisResponseDTO;
-import com.example.analyze_service.dto.EmailRequestDTO;
-import com.example.analyze_service.dto.ScheduleResponseDTO;
-import com.example.analyze_service.dto.TaskDTO;
+import com.example.analyze_service.dto.*;
 import com.example.analyze_service.entity.TaskAnalysis;
 import com.example.analyze_service.entity.TaskSchedule;
 import com.example.analyze_service.exception.NotFoundException;
 import com.example.analyze_service.repo.AnalysisRepo;
 import com.example.analyze_service.repo.TaskScheduleRepo;
-import com.example.analyze_service.service.AnalyzeService;
-import com.example.analyze_service.service.EmailApiClient;
-import com.example.analyze_service.service.EmotionClient;
-import com.example.analyze_service.service.TaskClient;
+import com.example.analyze_service.service.*;
 import com.example.analyze_service.util.StandardResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +40,9 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
     @Autowired
     private EmailApiClient emailApiClient;
 
+    @Autowired
+    private AiServiceClient aiServiceClient;
+
     @Override
     public AnalysisResponseDTO processUserStatus(int userId, String email) {
 
@@ -67,14 +64,24 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         }
 
         if (isBadMood(currentMood)) {
+
+            ActivityResponseDTO activityResponseDTO =
+                    aiServiceClient.getActivities(new SuggestionsRequestDTO(currentMood));
+
+            EmailRequestDTO emailRequest = new EmailRequestDTO();
+            emailRequest.setTo(email);
+            emailRequest.setSubject("Your Daily Task Schedule");
+            emailRequest.setBody(activityResponseDTO.getActivities().toString());
+            emailApiClient.sendEmail(emailRequest);
+
             return new AnalysisResponseDTO(
                     "REST_REQUIRED",
                     currentMood,
-                    "User requires recovery time. Suggest relaxation activities.",
-                    null
+                    "You seem "+ currentMood+ ". Try these calming activities.",
+                    null, // no schedule
+                    activityResponseDTO.getActivities()
             );
         }
-
         // Get Today's Pending Tasks
         StandardResponse response;
         try {
@@ -182,7 +189,8 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 "READY_TO_WORK",
                 currentMood,
                 "Structured schedule generated successfully.",
-                scheduleResponse
+                scheduleResponse,
+                null // no activities
         );
     }
 
