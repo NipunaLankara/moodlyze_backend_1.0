@@ -320,9 +320,10 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
 
         return new AnalysisResponseDTO(
                 "READY_TO_WORK",
-                "NEUTRAL",
-                "Today's schedule fetched",
-                scheduleResponse
+                analysis.getMoodAtTime(),
+                "Structured schedule generated successfully.",
+                scheduleResponse,
+                null // no activities
         );
     }
 }
