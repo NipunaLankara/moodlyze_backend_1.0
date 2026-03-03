@@ -1,51 +1,113 @@
 package com.example.ai_service.service.impl;
 
+import com.example.ai_service.dto.EmotionResponseDTO;
+import com.example.ai_service.dto.ActivityResponseDTO;
 import com.example.ai_service.service.AiService;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
-public class AiServiceIMPL implements AiService {
+public class AiServiceIMPL  implements AiService {
 
-    private final ChatModel chatModel;
+    private final RestTemplate restTemplate;
+    private final String apiKey;
+    private final String groqUrl;
 
-    public AiServiceIMPL(ChatModel chatModel) {
-        this.chatModel = chatModel;
+    public AiServiceIMPL(@Value("${ai.groq.api-key}") String apiKey,
+                         @Value("${ai.groq.url}") String groqUrl) {
+        this.restTemplate = new RestTemplate();
+        this.apiKey = apiKey;
+        this.groqUrl = groqUrl;
     }
 
-    @Override
-    public String generateResponse(String userPrompt) {
+    public EmotionResponseDTO detectEmotion(String prompt) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        String emotionPrompt =
+                "Analyze the sentence and return ONLY ONE emotion word (happy, sad, angry, anxious, stressed, calm). No explanation. Sentence: "
+                        + prompt;
+
+        Map<String, Object> body = Map.of(
+                "model", "llama-3.1-8b-instant",
+                "messages", List.of(
+                        Map.of("role", "user", "content", emotionPrompt)
+                ),
+                "temperature", 0
+        );
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        String response = restTemplate.postForObject(groqUrl, request, String.class);
+
         try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response);
 
-            // Option A: Use default settings from application.properties
-            // ChatResponse response = chatModel.call(new Prompt(userPrompt));
+            String emotion = root.path("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content")
+                    .asText()
+                    .trim()
+                    .toLowerCase();
 
-            GoogleGenAiChatOptions options = GoogleGenAiChatOptions.builder()
-                    .model("gemini-2.0-flash") // Updated from 1.5 to 2.0
-                    .temperature(0.7)
-                    .build();
-
-            Prompt prompt = new Prompt(userPrompt, options);
-            ChatResponse response = chatModel.call(prompt);
-
-            if (response != null && response.getResult() != null && response.getResult().getOutput() != null) {
-                return response.getResult().getOutput().getText();
-            }
-
-            return "AI returned an empty response with no specific error.";
+            return new EmotionResponseDTO(emotion);
 
         } catch (Exception e) {
-            // Log the full technical error to your console
-            System.err.println("--- TECHNICAL API ERROR START ---");
-            e.printStackTrace();
-            System.err.println("--- TECHNICAL API ERROR END ---");
+            throw new RuntimeException("Failed to parse emotion response", e);
+        }
+    }
 
-            // Return the EXACT error message from Google/Spring AI
-            // This will show things like "404 Not Found" or "429 Quota Exceeded"
-            return "TECHNICAL ERROR: " + e.getMessage();
+    public ActivityResponseDTO suggestActivities(String emotion) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        String activityPrompt =
+                "Suggest 10 short and practical activities for someone who feels " + emotion +
+                        ". Return as a comma separated list only.";
+
+        Map<String, Object> body = Map.of(
+                "model", "llama-3.1-8b-instant",
+                "messages", List.of(
+                        Map.of("role", "user", "content", activityPrompt)
+                ),
+                "temperature", 0.5
+        );
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        String response = restTemplate.postForObject(groqUrl, request, String.class);
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response);
+
+            String activitiesText = root.path("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content")
+                    .asText()
+                    .trim();
+
+            List<String> activities = List.of(activitiesText.split(","));
+
+            return new ActivityResponseDTO(activities);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse activities response", e);
         }
     }
 }

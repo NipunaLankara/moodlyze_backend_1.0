@@ -1,5 +1,6 @@
 package com.example.emotion_service.service.impl;
 
+import com.example.emotion_service.dto.EmotionResponseDTO;
 import com.example.emotion_service.dto.EmotionResultDTO;
 import com.example.emotion_service.dto.FastApiResponseDTO;
 import com.example.emotion_service.dto.TextEmotionRequestDTO;
@@ -69,28 +70,38 @@ public class EmotionServiceIMPL implements EmotionService {
     @Override
     public String detectFromText(TextEmotionRequestDTO textEmotionRequestDTO, int userId) {
         try {
-//            return  textEmotionRequestDTO.getPrompt();
+            System.out.println("Sending text to AI service: " + textEmotionRequestDTO.getText());
 
-            String prompt = "Analyze the emotion of the following text and respond with ONLY one word " +
-                    "(e.g., HAPPY, SAD, ANGRY, NEUTRAL, SURPRISED): " + textEmotionRequestDTO.getPrompt();
+            EmotionResponseDTO response = aiServiceClient.getAiResponse(textEmotionRequestDTO);
 
-            String result = aiServiceClient.getAiResponse(prompt);
-
-            if (result == null || result.trim().isEmpty()) {
-                throw new EmotionDetectionException("AI service returned an empty response.");
+            if (response == null || response.getEmotion() == null) {
+                throw new EmotionDetectionException("AI service returned null emotion");
             }
+
+            String result = response.getEmotion().trim();
+            System.out.println("AI emotion result: " + result);
+
             emotionRepo.save(new EmotionRecord(
-                    null, userId, result.toUpperCase().trim(), "TEXT", LocalDateTime.now()
+                    null, userId, result.toUpperCase(), "TEXT", LocalDateTime.now()
             ));
 
             return result;
 
         } catch (feign.FeignException e) {
-            // catch Feign issues
-            throw new EmotionDetectionException("AI Service is currently unavailable or unreachable.");
+            // 🔥 log real Feign error
+            System.err.println("Feign error status: " + e.status());
+            System.err.println("Feign error body: " + e.contentUTF8());
+            e.printStackTrace();
+
+            throw new EmotionDetectionException(
+                    "AI Service error: " + e.contentUTF8()
+            );
+
         } catch (Exception e) {
-            // Catch  other unexpected errors
-            throw new EmotionDetectionException("Failed to process text emotion: " + e.getMessage());
+            e.printStackTrace();
+            throw new EmotionDetectionException(
+                    "Failed to process text emotion: " + e.getMessage()
+            );
         }
     }
 

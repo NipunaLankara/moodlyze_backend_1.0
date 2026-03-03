@@ -1,11 +1,10 @@
-package com.example.ai_service;
+package com.example.reminder_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-
 @SpringBootTest
-class AiServiceApplicationTests {
+class ReminderServiceApplicationTests {
 
 	@Test
 	void contextLoads() {
