@@ -9,20 +9,28 @@
         <outputRelativeToContentRoot value="true" />
         <module name="config-server" />
         <module name="auth-service" />
+        <module name="reminder-service" />
+        <module name="analyze-service" />
         <module name="email-service" />
+        <module name="emotion-service" />
         <module name="api-gateway" />
         <module name="task-service" />
         <module name="user-service" />
         <module name="service-registry" />
+        <module name="ai-service" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="ai-service" options="-parameters" />
+      <module name="analyze-service" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
       <module name="config-server" options="-parameters" />
       <module name="email-service" options="-parameters" />
+      <module name="emotion-service" options="-parameters" />
+      <module name="reminder-service" options="-parameters" />
       <module name="service-registry" options="-parameters" />
       <module name="task-service" options="-parameters" />
       <module name="user-service" options="-parameters" />

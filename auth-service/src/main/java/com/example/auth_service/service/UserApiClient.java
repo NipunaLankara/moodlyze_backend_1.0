@@ -1,18 +1,29 @@
 package com.example.auth_service.service;
 
 import com.example.auth_service.dto.request.UserSaveDTO;
+import com.example.auth_service.util.StandardResponse;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 @FeignClient(name = "user-service")
 public interface UserApiClient {
 
     @PostMapping("/api/v1/user/save")
-    public boolean save(@RequestBody UserSaveDTO userSaveDTO);
+    StandardResponse save(@RequestBody UserSaveDTO userSaveDTO);
 
     @GetMapping("/api/v1/user/get-role")
     String getRole(@RequestParam("email") String email); // Added @RequestParam here too
+
+    @GetMapping("/api/v1/user/get-id")
+    Integer getUserId(@RequestParam("email") String email); // Added @RequestParam here too
+
+
+    @PutMapping("api/v1/user/update-email")
+    void updateEmail(
+            @RequestParam("userId") int userId,
+            @RequestParam("newEmail") String newEmail
+    );
+
 }
