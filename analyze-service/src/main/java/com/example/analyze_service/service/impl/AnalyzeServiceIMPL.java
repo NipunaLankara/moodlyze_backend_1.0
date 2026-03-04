@@ -251,7 +251,13 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
     }
 
     private boolean isBadMood(String mood) {
-        return List.of("SAD", "STRESSED", "ANGRY").contains(mood.toUpperCase());
+        if (mood == null) return false;
+
+        return List.of(
+                "SAD","STRESSED","ANXIOUS","ANGRY","DEPRESSED",
+                "FRUSTRATED","OVERWHELMED","TIRED","LONELY",
+                "IRRITATED","WORRIED","DISCOURAGED","HOPELESS","BURNT_OUT"
+        ).contains(mood.toUpperCase());
     }
 
     @Override
