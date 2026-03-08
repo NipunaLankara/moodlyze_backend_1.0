@@ -29,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/v1/auth/sign-in",
             "/api/v1/auth/sign-up",
             "/api/v1/auth/verify-otp",
+            "/api/v1/auth/verify-2fa",
             "/api/v1/auth-message/message"
     );
 
