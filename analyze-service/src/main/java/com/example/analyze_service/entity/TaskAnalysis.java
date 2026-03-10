@@ -19,6 +19,6 @@ public class TaskAnalysis {
 //    @Column(columnDefinition = "TEXT")
 //    private String smartPlan; // Stores the detailed schedule & task breakdowns
 
-    private String workingWindow; // e.g., "08:00 - 17:00"
+    private String workingWindow;
     private LocalDateTime createdAt;
 }

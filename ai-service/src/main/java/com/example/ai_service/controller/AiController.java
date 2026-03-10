@@ -17,14 +17,14 @@ public class AiController {
     @Autowired
     private AiService aiService;
 
-    // Detect emotion only
+    // Detect emotion
     @PostMapping("/emotion")
     public EmotionResponseDTO detectEmotion(@RequestBody TextEmotionRequestDTO request) {
         System.out.println(request);
         return aiService.detectEmotion(request.getText());
     }
 
-    // Suggest activities based on emotion
+
     @PostMapping("/activities")
     public ActivityResponseDTO suggestActivities(@RequestBody SuggestionsRequestDTO request) {
         return aiService.suggestActivities(request.getEmotion());

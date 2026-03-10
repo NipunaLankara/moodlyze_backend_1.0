@@ -89,7 +89,7 @@ public class AuthServiceIMPL implements AuthService {
         // Send OTP email
         EmailRequestDTO request = new EmailRequestDTO();
         request.setTo(email);
-        request.setSubject("Book Shop Registration OTP");
+        request.setSubject("Moodlyze Account Registration OTP");
         request.setBody("Your OTP is: " + otp);
 
         emailApiClient.sendEmail(request);
@@ -99,7 +99,7 @@ public class AuthServiceIMPL implements AuthService {
     }
 
 
-    //         VERIFY OTP — SAVE USER
+    // VERIFY OTP — SAVE USER
 
     @Override
     public String verifyOtpSaveUser(OtpVerifyDTO otpVerifyDTO) throws JsonProcessingException {
@@ -109,7 +109,6 @@ public class AuthServiceIMPL implements AuthService {
         // Verify OTP
         otpVerify.verifyAndDelete(email, otpVerifyDTO.getOtp());
 
-        // Retrieve temporary user data from Redis
         String tempKey = "tempUser:" + email;
         String tempJson = stringRedisTemplate.opsForValue().get(tempKey);
 
@@ -117,7 +116,7 @@ public class AuthServiceIMPL implements AuthService {
             throw new RuntimeException("Signup expired. Please register again.");
         }
 
-        // Convert JSON back to object
+
         UserSaveDTO userSaveDTO = objectMapper.readValue(tempJson, UserSaveDTO.class);
 
         int userId;
@@ -132,22 +131,20 @@ public class AuthServiceIMPL implements AuthService {
             userId = (int) response.getData();
 
         } catch (feign.RetryableException ex) {
-            // service DOWN / connection refused / timeout
+
             throw new DownstreamServiceException(
                     "User service is unavailable. Please try again later.",
                     ex
             );
 
         } catch (feign.FeignException ex) {
-            // user-service returned 4xx / 5xx
+
             throw new DownstreamServiceException(
                     "User service error occurred",
                     ex
             );
         }
 
-
-        //       SAVE AUTH USER IN DATABASE
         AuthUsers authUser = new AuthUsers();
         authUser.setUsername(userSaveDTO.getEmail());
         authUser.setPassword(passwordEncoder.encode(userSaveDTO.getPassword()));
@@ -175,7 +172,7 @@ public class AuthServiceIMPL implements AuthService {
             if (role == null) role = "USER";
         } catch (Exception e) {
             System.err.println("Could not fetch role from user-service: " + e.getMessage());
-            // Use default role so login doesn't crash completely
+
         }
 
         return new org.springframework.security.core.userdetails.User(
@@ -191,55 +188,18 @@ public class AuthServiceIMPL implements AuthService {
         return authorities;
     }
 
-//    @Override
-//    public Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception {
-//        // Authenticate FIRST (This throws BadCredentialsException if login fails)
-//        authenticationManager.authenticate(
-//                new UsernamePasswordAuthenticationToken(dto.getUserEmail(), dto.getPassword())
-//        );
-//        String userEmail = dto.getUserEmail();
-//        Integer userId = userApiClient.getUserId(userEmail);
-//        String role = userApiClient.getRole(userEmail);   //  Use UserAPIClient.........
-//
-//        String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
-//
-//
-//        AuthUsers authUsers = authUserRepo.findByUsername(userEmail);
-//
-//        // Save Login Activity........
-//        String ipAddress = request.getRemoteAddr();
-//        String userAgent = request.getHeader("User-Agent");
-//        boolean isNew = loginActivityService.isNewDevice(authUsers, ipAddress, userAgent);
-//        loginActivityService.saveLoginActivity(authUsers, ipAddress, userAgent, isNew);
-//        if (isNew) {
-//            EmailRequestDTO request = new EmailRequestDTO();
-//            request.setTo(authUsers.getUsername());
-//            request.setSubject("New Login Detected");
-//            request.setBody(
-//                    "Hello,\n\n" +
-//                            "New login detected.\n" +
-//                            "IP: " + ipAddress + "\n" +
-//                            "Device: " + userAgent
-//            );
-//            emailApiClient.sendEmail(request);
-//
-//        }
-//        return new LoginResponseDTO(userEmail, role, generatedToken);
-//    }
 
     @Override
     public Object createJwtTokenAndLogin(LoginRequestDTO dto) throws Exception {
 
         String userEmail = dto.getUserEmail();
 
-        // Authenticate password first
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(userEmail, dto.getPassword())
         );
 
         AuthUsers authUser = authUserRepo.findByUsername(userEmail);
 
-        //CHECK IF 2FA ENABLED
         if (authUser.isTwoFactorEnabled()) {
 
             String otp = otpGenerator.generateOtp();
@@ -251,7 +211,6 @@ public class AuthServiceIMPL implements AuthService {
                     Duration.ofMinutes(5)
             );
 
-            // Send Email
             EmailRequestDTO mail = new EmailRequestDTO();
             mail.setTo(userEmail);
             mail.setSubject("Your 2FA Verification Code");
@@ -275,7 +234,6 @@ public class AuthServiceIMPL implements AuthService {
 
         String generatedToken = jwtUtil.generateToken(userEmail, userId, role);
 
-        // Save login activity
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
 
@@ -325,14 +283,7 @@ public class AuthServiceIMPL implements AuthService {
                 Duration.ofMinutes(5)
         );
 
-//        // -------- Save pending email change
-//        stringRedisTemplate.opsForValue().set(
-//                "email-change:" + newEmail,   // Fix --- here when user verify otp insert older email,can not change it because it used - Update auth-service DB
-//                newEmail,
-//                Duration.ofMinutes(10)
-//        );
 
-        // -------- Send OTP email (reuse existing email-service)
         EmailRequestDTO mail = new EmailRequestDTO();
         mail.setTo(newEmail);
         mail.setSubject("Verify New Email");
@@ -355,10 +306,9 @@ public class AuthServiceIMPL implements AuthService {
             throw new RuntimeException("Email change request expired");
         }
 
-        // -------- Verify OTP
+
         otpVerify.verifyAndDelete(newEmail, dto.getOtp());
 
-        // -------- Update auth-service DB
         AuthUsers user = authUserRepo.findByUserId(userId);  // Fix -- here use older email.........
         if (user == null) {
             throw new UsernameNotFoundException("User not found");
@@ -367,11 +317,9 @@ public class AuthServiceIMPL implements AuthService {
         user.setUsername(newEmail);
         authUserRepo.save(user);
 
-        // -------- Sync user-service
+
         userApiClient.updateEmail(userId,newEmail);
 
-//        // -------- Clean Redis
-//        stringRedisTemplate.delete(redisKey);
 
         return "Email updated successfully";
     }
@@ -418,7 +366,7 @@ public class AuthServiceIMPL implements AuthService {
             throw new RuntimeException("Invalid OTP.");
         }
 
-        // Delete OTP (one time use)
+
         stringRedisTemplate.delete(key);
 
         AuthUsers authUser = authUserRepo.findByUsername(email);
@@ -437,14 +385,13 @@ public class AuthServiceIMPL implements AuthService {
 
         String otp = otpGenerator.generateOtp();
 
-        // Save in Redis (5 min)
+
         stringRedisTemplate.opsForValue().set(
                 "reset:" + email,
                 otp,
                 Duration.ofMinutes(5)
         );
 
-        // Send email
         EmailRequestDTO mail = new EmailRequestDTO();
         mail.setTo(email);
         mail.setSubject("Password Reset OTP");
@@ -470,7 +417,6 @@ public class AuthServiceIMPL implements AuthService {
             throw new RuntimeException("Invalid OTP");
         }
 
-        // Delete OTP (one time use)
         stringRedisTemplate.delete(key);
 
         AuthUsers user = authUserRepo.findByUsername(dto.getEmail());

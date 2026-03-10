@@ -75,7 +75,6 @@ public class UserServiceIMPL implements UserService {
         boolean emailChanged =
                 !user.getEmail().equals(dto.getEmail());
 
-        // Update non-sensitive fields immediately
         user.setName(dto.getName());
         user.setAddress(dto.getAddress());
         user.setContactNumber(dto.getContactNumber());

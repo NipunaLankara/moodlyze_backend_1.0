@@ -17,11 +17,11 @@ public class AnalyzeController {
 
     @GetMapping("/process")
     public ResponseEntity<StandardResponse> getMoodBasedAnalysis(
-            @RequestHeader("X-User-Id") int userId
-//            @RequestHeader("X-Email") String email
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Email") String email
     ) {
         System.out.println(userId);
-        String email = "nipunalankara@gmail.com";
+//        String email = "nipunalankara@gmail.com";
         AnalysisResponseDTO response = analyzeService.processUserStatus(userId,email);
 
         String message = response.getState().equals("REST_REQUIRED")
@@ -53,7 +53,7 @@ public class AnalyzeController {
     public ResponseEntity<StandardResponse> getTodaysSchedule(
             @RequestHeader("X-User-Id") int userId
     ) {
-        // Let the service throw NotFoundException if no schedule exists
+
         AnalysisResponseDTO response = analyzeService.getTodaySchedule(userId);
 
         return ResponseEntity.ok(

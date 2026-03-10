@@ -46,7 +46,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
     @Override
     public AnalysisResponseDTO processUserStatus(int userId, String email) {
 
-        //  Get Current Mood
+
         String currentMood = "NEUTRAL"; // default mood
 
         try {
@@ -59,7 +59,6 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
             }
 
         } catch (Exception e) {
-            // Log error but continue with default mood
             System.out.println("Emotion service unavailable or no data found. Using default mood: NEUTRAL");
         }
 
@@ -78,7 +77,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                     "REST_REQUIRED",
                     currentMood,
                     "You seem "+ currentMood+ ". Try these calming activities.",
-                    null, // no schedule
+                    null,
                     activityResponseDTO.getActivities()
             );
         }
@@ -136,7 +135,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
             throw new NotFoundException("Failed to generate schedule for today.");
         }
 
-        //  Convert schedule to DTO
+
         List<ScheduleResponseDTO> scheduleResponse =
                 savedSchedules.stream().map(s -> {
                     ScheduleResponseDTO dto = new ScheduleResponseDTO();
@@ -184,13 +183,13 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         emailRequest.setBody(scheduleText.toString());
         emailApiClient.sendEmail(emailRequest);
 
-        // Return Response
+
         return new AnalysisResponseDTO(
                 "READY_TO_WORK",
                 currentMood,
                 "Structured schedule generated successfully.",
                 scheduleResponse,
-                null // no activities
+                null
         );
     }
 
@@ -256,7 +255,7 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
         return List.of(
                 "SAD","STRESSED","ANXIOUS","ANGRY","DEPRESSED",
                 "FRUSTRATED","OVERWHELMED","TIRED","LONELY",
-                "IRRITATED","WORRIED","DISCOURAGED","HOPELESS","BURNT_OUT"
+                "IRRITATED","WORRIED","DISCOURAGED","HOPELESS","BURNT_OUT","FEAR"
         ).contains(mood.toUpperCase());
     }
 
@@ -267,7 +266,6 @@ public class AnalyzeServiceIMPL implements AnalyzeService {
                 .orElseThrow(() -> new NotFoundException("Schedule part not found"));
 
         if (schedule.isBreak()) {
-            // Simply mark break as completed, no task-service call
             schedule.setStatus("COMPLETED");
             scheduleRepo.save(schedule);
             return;

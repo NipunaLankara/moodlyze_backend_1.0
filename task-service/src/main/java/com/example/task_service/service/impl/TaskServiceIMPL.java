@@ -42,7 +42,6 @@ public class TaskServiceIMPL  implements TaskSerivce {
         try {
             List<Task> taskList = taskRepo.findByUserId(userId);
 
-            // Using streams to map entities to DTOs
             return taskList.stream()
                     .map(taskMapper::entityToDto)
                     .collect(Collectors.toList());

@@ -13,7 +13,7 @@ public class TaskSchedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long analysisId;     // FK reference
+    private Long analysisId;
     private Long taskId;
 
     private String title;        // Original title

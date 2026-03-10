@@ -37,7 +37,7 @@ public class UserController {
     }
 
     @GetMapping("/get-role")
-    public String getRole(@RequestParam("email") String email) { // Added @RequestParam
+    public String getRole(@RequestParam("email") String email) {
         System.out.println("Email issssssssss=====" + email);
         return userService.getRole(email);
     }
@@ -98,8 +98,5 @@ public class UserController {
                 new StandardResponse(200, "Success", msg)
         );
     }
-
-
-
 
 }
